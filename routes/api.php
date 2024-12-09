@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Tutor\TutorController;
@@ -35,6 +36,12 @@ Route::prefix('tutor')->controller(TutorController::class)->group(function () {
 
 // Admin Controller
 Route::group(['prefix' => 'admin', 'middleware' => ['jwt.auth', 'admin']], function () {
+
+    Route::controller(AdminController::class)->group(function () {
+        Route::get('/subject', 'getSubject');
+        Route::post('/subject/store', 'storeSubject');
+        Route::delete('/subject/destroy/{id}', 'destroySubject');
+    });
     Route::prefix('category')->controller(CategoryController::class)->group(function () {
         Route::get('/', 'index');
         Route::post('/store', 'store');
