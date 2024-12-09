@@ -10,7 +10,7 @@ if (!function_exists('sendOtp')) {
     {
         $otp = generateOtp();
         $otp_expiry_at = Carbon::now()->addMinutes($otp_expiry_time)
-                    ->format('Y-m-d H:i:s');
+            ->format('Y-m-d H:i:s');
         $data = [
             'email' => $data['email'],
             'title' => 'Email Verification',
@@ -30,4 +30,30 @@ if (!function_exists('generateOtp')) {
         $otp = str_pad(rand(0, pow(10, $length) - 1), $length, '0', STR_PAD_LEFT);
         return $otp;
     }
+}
+
+//generate slug
+if (!function_exists('generateSlug')) {
+    function generateSlug($string)
+    {
+        $slug = strtolower(preg_replace('/[^A-Za-z0-9-]+/', '-', $string));
+        return $slug;
+    }
+}
+
+//generate unique slug
+if (!function_exists('generateUniqueSlug')) {
+    function generateUniqueSlug($model, $string)
+    {
+        $slug = generateSlug($string);
+        $originalSlug = $slug;
+        $count = 1;
+        while ($model::where('slug', $slug)->exists()) {
+            $slug = $originalSlug . '-' . $count;
+            $count++;
+        }
+        return $slug;
+    }
+
+    
 }

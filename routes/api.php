@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Tutor\TutorController;
 use Illuminate\Http\Request;
@@ -28,5 +29,24 @@ Route::prefix('tutor')->controller(TutorController::class)->group(function () {
         Route::put('/update-profile', 'updateTutorProfile');
         Route::post('/verify-tutor-info', 'verifyTutorInfo');
         Route::get('/verify-tutor-info', 'getTutorVerificationInfo');
+    });
+});
+
+
+// Admin Controller
+Route::group(['prefix' => 'admin', 'middleware' => ['jwt.auth', 'admin']], function () {
+    Route::prefix('category')->controller(CategoryController::class)->group(function () {
+        Route::get('/', 'index');
+        Route::post('/store', 'store');
+        Route::get('/show/{slug}', 'show');
+        Route::put('/update/{slug}', 'update');
+        Route::delete('/destroy/{slug}', 'destroy');
+    });
+    Route::prefix('sub-category')->controller(CategoryController::class)->group(function () {
+        Route::get('/','indexSubCategory');
+        Route::post('/store', 'storeSubCategory');
+        Route::get('/show-by-category/{category_id}', 'showSubCategoryByCategoryId');
+        Route::put('/update/{slug}', 'subCategoryUpdate');
+        Route::delete('/destroy/{slug}', 'destroySubCategory');
     });
 });
