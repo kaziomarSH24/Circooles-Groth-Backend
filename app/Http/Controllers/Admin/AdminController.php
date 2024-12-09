@@ -69,4 +69,8 @@ class AdminController extends Controller
             'message' => 'Subject deleted successfully',
         ]);
     }
+
+    /*====================
+    Subject Controller end
+    =====================*/
 }
