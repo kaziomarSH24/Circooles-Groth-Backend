@@ -37,6 +37,7 @@ if (!function_exists('generateSlug')) {
     function generateSlug($string)
     {
         $slug = strtolower(preg_replace('/[^A-Za-z0-9-]+/', '-', $string));
+        $slug = rtrim($slug, '-');
         return $slug;
     }
 }
@@ -54,6 +55,4 @@ if (!function_exists('generateUniqueSlug')) {
         }
         return $slug;
     }
-
-    
 }

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Tutor\TutorController;
 use Illuminate\Http\Request;
@@ -55,5 +56,18 @@ Route::group(['prefix' => 'admin', 'middleware' => ['jwt.auth', 'admin']], funct
         Route::get('/show-by-category/{category_id}', 'showSubCategoryByCategoryId');
         Route::put('/update/{slug}', 'subCategoryUpdate');
         Route::delete('/destroy/{slug}', 'destroySubCategory');
+    });
+
+    Route::prefix('course')->controller(CourseController::class)->group(function () {
+        Route::get('/', 'indexCourse');
+        Route::post('/store', 'storeCourse');
+        Route::get('/show/{id}', 'showCourse');
+        Route::put('/update/{id}', 'updateCourse');
+        Route::delete('/destroy/{id}', 'destroyCourse');
+
+        //currictulum routes
+        Route::get('/curriculum/{course_id}', 'getCurriculum');
+        Route::post('/curriculum/store/{course_id}', 'storeCurriculum');
+        Route::put('/curriculum/update/{id}', 'updateCurriculum');
     });
 });

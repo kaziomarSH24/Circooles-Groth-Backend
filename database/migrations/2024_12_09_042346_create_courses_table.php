@@ -25,7 +25,7 @@ return new class extends Migration
             $table->string('c_level');
             $table->integer('duration');
             $table->string('thumbnail');
-            $table->string('trail_video');
+            $table->string('trailer_video');
             $table->text('description');
             $table->json('teach_course')->nullable();
             $table->json('targer_audience')->nullable();
