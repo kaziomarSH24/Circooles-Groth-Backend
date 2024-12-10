@@ -169,6 +169,25 @@ class TutorController extends Controller
                 ]);
             }
 
+            //unlink previous images
+            $oldCertificates = $tutor->tutorVerification ? json_decode($tutor->tutorVerification->academic_certificates) : null;
+            if ($oldCertificates) {
+                foreach ($oldCertificates as $key => $certificate) {
+                    unlink(public_path('uploads/tutor/academic_certificates/' . $certificate->image));
+                }
+            }
+
+            $oldIdCard = $tutor->tutorVerification ? json_decode($tutor->tutorVerification->id_card) : null;
+            if ($oldIdCard) {
+                unlink(public_path('uploads/tutor/id_card/' . $oldIdCard->front_side));
+                unlink(public_path('uploads/tutor/id_card/' . $oldIdCard->back_side));
+            }
+
+            $oldTcl = $tutor->tutorVerification ? json_decode($tutor->tutorVerification->tsc) : null;
+            if ($oldTcl) {
+                unlink(public_path('uploads/tutor/tsc/' . $oldTcl->image));
+            }
+
             //certificate image upload
             $certificates = $request->input('academic_certificates');
             foreach ($certificates as $key => $certificate) {
@@ -377,13 +396,11 @@ class TutorController extends Controller
     public function checkMethod()
     {
         $tutor = TutorInfo::where('user_id', Auth::user()->id)->first();
-        $verify_payment_status = json_decode($tutor->tutorVerification->academic_certificates) ?? null;
-        // foreach($verify_payment_status as $key => $value){
-        //     unlink(public_path('uploads/tutor/academic_certificates/'.$value->image));
-        // }
+        $certificate = $tutor->tutorVerification ? $tutor->tutorVerification->academic_certificates : null;
+        
         return response()->json([
             'success' => true,
-            'data' => $verify_payment_status,
+            'data' => $certificate,
         ]);
     }
 }
