@@ -4,6 +4,7 @@ use App\Mail\sendOtp;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
 
+
 //send otp
 if (!function_exists('sendOtp')) {
     function sendOtp(array $data, $otp_expiry_time = 10)
@@ -56,3 +57,12 @@ if (!function_exists('generateUniqueSlug')) {
         return $slug;
     }
 }
+
+//create transaction reference unique id
+if(!function_exists('referenceId')){
+    function referenceId(){
+        return 'circooles_' .uniqid();
+    }
+}
+
+//file upload

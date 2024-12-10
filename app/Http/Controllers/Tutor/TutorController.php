@@ -4,16 +4,21 @@ namespace App\Http\Controllers\Tutor;
 
 use App\Http\Controllers\Controller;
 use App\Models\Subject;
+use App\Models\Transaction;
 use App\Models\TutorInfo;
 use App\Models\TutorVerification;
+use App\Services\PaystackService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Validator;
 
 class TutorController extends Controller
 {
     public function getTutor(Request $request)
     {
-        $user = auth()->user();
+        $user = Auth::user();
         $tutor = TutorInfo::with('user')->where('user_id', $user->id)->first();
 
         if (!$tutor) {
@@ -98,7 +103,8 @@ class TutorController extends Controller
             ]);
         }
 
-        $user = auth()->user();
+
+        $user = Auth::user();
         $tutor = TutorInfo::UpdateOrCreate(
             ['user_id' => $user->id],
             [
@@ -128,110 +134,154 @@ class TutorController extends Controller
 
     public function verifyTutorInfo(Request $request)
     {
-        $tutor = TutorInfo::where('user_id', auth()->user()->id)->first();
-        if (!$tutor) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Set up tutor profile first',
+        DB::beginTransaction();
+
+        try {
+            $tutor = TutorInfo::where('user_id', Auth::user()->id)->first();
+            if (!$tutor) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Set up tutor profile first',
+                ]);
+            }
+
+            // return request()->all();
+
+            $validator = Validator::make($request->all(), [
+                'academic_certificates' => 'required|array',
+                'academic_certificates.*.certificate' => 'required|string',
+                'academic_certificates.*.image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|dimensions:max_width=800,max_height=400',
+                'id_card' => 'required|array',
+                'id_card.type' => 'required|string',
+                'id_card.front_side' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|dimensions:max_width=800,max_height=400',
+                'id_card.back_side' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|dimensions:max_width=800,max_height=400',
+                'tsc' => 'nullable|array',
+                'tsc.number' => 'required|string',
+                'tsc.image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|dimensions:max_width=800,max_height=400',
+                'verification_fee' => 'required|numeric',
+                'status' => 'nullable|in:pending,declined,verified',
             ]);
-        }
 
-        // return request()->all();
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors(),
+                ]);
+            }
 
-        $validator = Validator::make($request->all(), [
-            'academic_certificates' => 'required|array',
-            'academic_certificates.*.certificate' => 'required|string',
-            'academic_certificates.*.image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|dimensions:max_width=800,max_height=400',
-            'id_card' => 'required|array',
-            'id_card.type' => 'required|string',
-            'id_card.front_side' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|dimensions:max_width=800,max_height=400',
-            'id_card.back_side' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|dimensions:max_width=800,max_height=400',
-            'tsc' => 'nullable|array',
-            'tsc.number' => 'required|string',
-            'tsc.image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|dimensions:max_width=800,max_height=400',
-            'verification_fee' => 'required|numeric',
-            'status' => 'nullable|in:pending,declined,verified',
-        ]);
+            //certificate image upload
+            $certificates = $request->input('academic_certificates');
+            foreach ($certificates as $key => $certificate) {
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors(),
-            ]);
-        }
-
-        //certificate image upload
-        $certificates = $request->input('academic_certificates');
-        foreach ($certificates as $key => $certificate) {
-
-            if ($request->hasFile('academic_certificates.' . $key . '.image')) {
-                if ($request->file('academic_certificates.' . $key . '.image')->isValid()) {
-                    $image = $request->file('academic_certificates.' . $key . '.image');
-                    $image_name = time() . '_' . $image->getClientOriginalName();
-                    if (!file_exists(public_path('uploads/tutor/academic_certificates'))) {
-                        mkdir(public_path('uploads/tutor/academic_certificates'), 0777, true);
+                if ($request->hasFile('academic_certificates.' . $key . '.image')) {
+                    if ($request->file('academic_certificates.' . $key . '.image')->isValid()) {
+                        $image = $request->file('academic_certificates.' . $key . '.image');
+                        $image_name =  time() . rand(100, 999) . '_' . $image->getClientOriginalName();
+                        if (!file_exists(public_path('uploads/tutor/academic_certificates'))) {
+                            mkdir(public_path('uploads/tutor/academic_certificates'), 0777, true);
+                        }
+                        $image->move(public_path('uploads/tutor/academic_certificates'), $image_name);
+                        $certificates[$key]['image'] = $image_name;
                     }
-                    $image->move(public_path('uploads/tutor/academic_certificates'), $image_name);
-                    $certificates[$key]['image'] = $image_name;
                 }
             }
-        }
 
-        //id card image upload
-        $id_card = $request->input('id_card');
-        if ($request->hasFile('id_card.front_side') && $request->hasFile('id_card.back_side')) {
-            if ($request->file('id_card.front_side')->isValid() && $request->file('id_card.back_side')->isValid()) {
-                $front_side = $request->file('id_card.front_side');
-                $back_side = $request->file('id_card.back_side');
-                $front_side_name = time() . '_' . $front_side->getClientOriginalName();
-                $back_side_name = time() . '_' . $back_side->getClientOriginalName();
-                if (!file_exists(public_path('uploads/tutor/id_card'))) {
-                    mkdir(public_path('uploads/tutor/id_card'), 0777, true);
+            //id card image upload
+            $id_card = $request->input('id_card');
+            if ($request->hasFile('id_card.front_side') && $request->hasFile('id_card.back_side')) {
+                if ($request->file('id_card.front_side')->isValid() && $request->file('id_card.back_side')->isValid()) {
+                    $front_side = $request->file('id_card.front_side');
+                    $back_side = $request->file('id_card.back_side');
+                    $front_side_name =  time() . rand(100, 999) . '_' . $front_side->getClientOriginalName();
+                    $back_side_name =  time() . rand(100, 999) . '_' . $back_side->getClientOriginalName();
+                    if (!file_exists(public_path('uploads/tutor/id_card'))) {
+                        mkdir(public_path('uploads/tutor/id_card'), 0777, true);
+                    }
+                    $front_side->move(public_path('uploads/tutor/id_card'), $front_side_name);
+                    $back_side->move(public_path('uploads/tutor/id_card'), $back_side_name);
+                    $id_card['front_side'] = $front_side_name;
+                    $id_card['back_side'] = $back_side_name;
                 }
-                $front_side->move(public_path('uploads/tutor/id_card'), $front_side_name);
-                $back_side->move(public_path('uploads/tutor/id_card'), $back_side_name);
-                $id_card['front_side'] = $front_side_name;
-                $id_card['back_side'] = $back_side_name;
             }
-        }
 
-        //tsc image upload
-        $tsc = $request->input('tsc');
-        if ($request->hasFile('tsc.image')) {
-            if ($request->file('tsc.image')->isValid()) {
-                $tsc_image = $request->file('tsc.image');
-                $tsc_image_name = time() . '_' . $tsc_image->getClientOriginalName();
-                if (!file_exists(public_path('uploads/tutor/tsc'))) {
-                    mkdir(public_path('uploads/tutor/tsc'), 0777, true);
+            //tsc image upload
+            $tsc = $request->input('tsc');
+            if ($request->hasFile('tsc.image')) {
+                if ($request->file('tsc.image')->isValid()) {
+                    $tsc_image = $request->file('tsc.image');
+                    $tsc_image_name =  time() . rand(100, 999) . '_' . $tsc_image->getClientOriginalName();
+                    if (!file_exists(public_path('uploads/tutor/tsc'))) {
+                        mkdir(public_path('uploads/tutor/tsc'), 0777, true);
+                    }
+                    $tsc_image->move(public_path('uploads/tutor/tsc'), $tsc_image_name);
+                    $tsc['image'] = $tsc_image_name;
                 }
-                $tsc_image->move(public_path('uploads/tutor/tsc'), $tsc_image_name);
-                $tsc['image'] = $tsc_image_name;
             }
+
+            $verify_payment_status = $tutor->tutorVerification->payment_status ?? null;
+
+            if ($verify_payment_status === null || $verify_payment_status != 'paid') {
+                $paystack = new PaystackService();
+                $response = $paystack->initializeTransaction([
+                    'amount' => $request->verification_fee * 100,
+                    'email' => Auth::user()->email,
+                    'reference' => referenceId(),
+                    'callback_url' => route('tutor.verify.callback'),
+                ]);
+            }
+
+            if ((isset($response) && $response->status === true) || $verify_payment_status == 'paid') {
+                $tutor_verification = TutorVerification::updateOrCreate(
+                    ['tutor_id' => $tutor->id],
+                    [
+                        'academic_certificates' => json_encode($certificates),
+                        'id_card' => json_encode($id_card),
+                        'tsc' => json_encode($tsc),
+                        'verification_fee' => $request->verification_fee,
+                        'payment_url' => $response->data->authorization_url ?? null,
+                    ]
+                );
+
+                if ($verify_payment_status != 'paid') {
+                    $transaction = Transaction::create([
+                        'buyer_id' => Auth::user()->id,
+                        'buyer_type' => 'tutor',
+                        'reference' => $response->data->reference,
+                        'amount' => $request->verification_fee,
+                        'status' => 'pending',
+                    ]);
+                }
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Tutor verification info updated successfully',
+                    'reference' => $response->data->reference ?? null,
+                    'payment_url' => $response->data->authorization_url ?? null,
+                    'data' => $tutor_verification,
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Payment failed',
+                ]);
+            }
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'error' => 'Something went wrong',
+                'success' => false,
+                'message' => $e->getMessage(),
+            ]);
         }
-
-        $tutor_verification = TutorVerification::updateOrCreate(
-            ['tutor_id' => $tutor->id],
-            [
-                'academic_certificates' => json_encode($certificates),
-                'id_card' => json_encode($id_card),
-                'tsc' => json_encode($tsc),
-                'verification_fee' => $request->verification_fee,
-                'status' => $request->status ?? 'pending',
-            ]
-        );
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Tutor verification info updated successfully',
-            'data' => $tutor_verification,
-        ]);
     }
 
 
     //get tutor verification info
     public function getTutorVerificationInfo(Request $request)
     {
-        $tutor = TutorInfo::where('user_id', auth()->user()->id)->first();
+        $tutor = TutorInfo::where('user_id', Auth::user()->id)->first();
         if (!$tutor) {
             return response()->json([
                 'success' => false,
@@ -264,6 +314,76 @@ class TutorController extends Controller
         return response()->json([
             'success' => true,
             'data' => $data,
+        ]);
+    }
+
+
+
+    //verify tutor callback
+    public function tutorVerifyCallback(Request $request)
+    {
+        $paystack = new PaystackService();
+        $reference = $request->query('reference');
+        $response = $paystack->verifyTransaction($reference);
+
+        if ($reference) {
+            $transaction = Transaction::where('reference', $reference)
+                ->first();
+            $tutorId = $transaction->buyer->tutorInfo->id;
+
+            $tutor_verification = TutorVerification::where('tutor_id', $tutorId)
+                ->first();
+            if ($response->data->status === 'success') {
+
+                $tutor_verification->update([
+                    'payment_status' => 'paid',
+                    'payment_url' => null,
+                ]);
+
+                $transaction->update([
+                    'status' => 'success',
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Payment successful',
+                    'data' => $tutor_verification,
+                ]);
+            } else {
+                $tutor_verification->update([
+                    'payment_status' => 'failed',
+                    'payment_url' => null,
+                ]);
+
+                $transaction->update([
+                    'status' => 'failed',
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Payment failed',
+                    'data' => $tutor_verification,
+                ]);
+            }
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Payment failed',
+        ]);
+    }
+
+
+    public function checkMethod()
+    {
+        $tutor = TutorInfo::where('user_id', Auth::user()->id)->first();
+        $verify_payment_status = json_decode($tutor->tutorVerification->academic_certificates) ?? null;
+        // foreach($verify_payment_status as $key => $value){
+        //     unlink(public_path('uploads/tutor/academic_certificates/'.$value->image));
+        // }
+        return response()->json([
+            'success' => true,
+            'data' => $verify_payment_status,
         ]);
     }
 }

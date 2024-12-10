@@ -46,6 +46,25 @@ class PaystackService
 
         return json_decode($response);
     }
+    
+
+    //initialize transaction
+    public function initializeTransaction($data)
+    {
+        return $this->sendRequest('POST', '/transaction/initialize', $data);
+    }
+
+    //verify transaction
+    public function verifyTransaction($reference)
+    {
+        return $this->sendRequest('GET', "/transaction/verify/$reference");
+    }
+
+    //get payment data
+    public function getPaymentData($reference)
+    {
+        return $this->sendRequest('GET', "/paymentrequest/$reference");
+    }
 
     //get customer
     public function getCustomer($code)
@@ -65,12 +84,33 @@ class PaystackService
         return $this->sendRequest('POST', "/customer/$code/identification", $data);
     }
 
-    //subaccount
+
+    /* Subaccount */
+    //subaccount create
     public function createSubaccount($data)
     {
         return $this->sendRequest('POST', '/subaccount', $data);
     }
 
+    //subaccount list
+    public function listSubaccount()
+    {
+        return $this->sendRequest('GET', '/subaccount');
+    }
+
+    //subaccount fetch
+    public function fetchSubaccount($code)
+    {
+        return $this->sendRequest('GET', "/subaccount/$code");
+    }
+
+    //update subaccount
+    public function updateSubaccount($code, $data)
+    {
+        return $this->sendRequest('PUT', "/subaccount/$code", $data);
+    }
+
+    /* Transfer refund */
     //refund
     public function refund($data)
     {

@@ -14,6 +14,8 @@ class TutorVerification extends Model
         'tsc',
         'verification_fee',
         'status',
+        'payment_status',
+        'payment_url',
     ];
     protected $casts = [
         'academic_certificates' => 'json',
