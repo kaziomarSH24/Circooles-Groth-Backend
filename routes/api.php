@@ -17,6 +17,17 @@ Route::controller(AuthController::class)->group(function () {
     Route::get('/resentOtp', 'resendOtp');
     Route::post('reset-password', 'resetPassword');
 
+    //social login
+    Route::get('/auth/google', 'loginWithGoogle')
+        ->name('google.login');
+
+    //social login callback
+    Route::get('/auth/google/callback', [AuthController::class, 'googleLoginCallback'])->name('google.login.callback');
+
+    //social login callback
+    Route::get('/auth/google/callback', 'googleLoginCallback')
+        ->name('google.login.callback');
+
     Route::middleware('jwt.auth')->group(function () {
         Route::get('/user', 'getUser');
         Route::put('/update-profile', 'updateProfile');
@@ -35,6 +46,10 @@ Route::prefix('tutor')->controller(TutorController::class)->group(function () {
 
 
 
+        //tutor verify transaction callback
+        Route::get('/verify/callback','tutorVerifyCallback')
+              ->name('tutor.verify.callback')
+              ->withoutMiddleware(['jwt.auth', 'tutor']);
         //check method
         Route::get('/check-method', 'checkMethod');
     });
@@ -78,5 +93,5 @@ Route::group(['prefix' => 'admin', 'middleware' => ['jwt.auth', 'admin']], funct
     });
 });
 
-//verify transaction callback
-Route::get('/verify/callback', [TutorController::class, 'tutorVerifyCallback'])->name('tutor.verify.callback');
+
+

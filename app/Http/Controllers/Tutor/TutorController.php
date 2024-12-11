@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Validator;
 
 class TutorController extends Controller
 {
+    
     public function getTutor(Request $request)
     {
         $user = Auth::user();

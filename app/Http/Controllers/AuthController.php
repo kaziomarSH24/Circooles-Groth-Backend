@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Types\Relations\Car;
+use Laravel\Socialite\Facades\Socialite;
 use Tymon\JWTAuth\Contracts\Providers\JWT;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
@@ -42,7 +43,7 @@ class AuthController extends Controller
             'user' => $user,
         ]);
     }
-    
+
     /**
      * Register a User
      */
@@ -194,7 +195,7 @@ class AuthController extends Controller
         ]);
     }
 
-    
+
     /**
      * resend OTP // also using for forgot password
      */
@@ -301,7 +302,7 @@ class AuthController extends Controller
         }
 
     }
-    
+
     /**
      * Update Profile
      */
@@ -321,7 +322,7 @@ class AuthController extends Controller
         $user->name = $request->name;
         $user->email = $request->email;
         $user->phone = $request->phone;
-        
+
         if($request->hasFile('avatar')){
 
             if($user->avatar){
@@ -344,4 +345,51 @@ class AuthController extends Controller
         ]);
 
     }
+
+
+    //social login with google
+    public function loginWithGoogle(Request $request){
+      return Socialite::driver('google')->stateless()->redirect();
+    }
+
+    //social login callback
+    public function googleLoginCallback(Request $request){
+        try {
+            $user = Socialite::driver('google')->stateless()->user();
+            $is_user = User::where('email', $user->getEmail())->first();
+            if ($is_user) {
+                $token = JWTAuth::fromUser($is_user);
+                return response()->json([
+                    'success' => true,
+                    'message' => 'User logged in successfully!',
+                    'token' => $token,
+                    'user' => $is_user,
+                ]);
+            }
+            $user = User::firstOrCreate([
+                'email' => $user->email,
+            ], [
+                'name' => $user->name,
+                'email' => $user->email,
+                'password' => Hash::make($user->getName().'@' .$user->getId()),
+                'google_id' => $user->id,
+            ]);
+
+            $token = JWTAuth::fromUser($user);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User created successfully!',
+                'token' => $token,
+                'user' => $user,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong!',
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
 }
