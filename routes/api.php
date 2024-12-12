@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Student\StudentController;
 use App\Http\Controllers\Tutor\TutorController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +36,8 @@ Route::controller(AuthController::class)->group(function () {
     });
 });
 
+
+
 // Tutor Controller
 Route::prefix('tutor')->controller(TutorController::class)->group(function () {
     Route::middleware(['jwt.auth', 'tutor',])->group(function () {
@@ -54,6 +57,8 @@ Route::prefix('tutor')->controller(TutorController::class)->group(function () {
         Route::get('/check-method', 'checkMethod');
     });
 });
+
+
 
 
 // Admin Controller
@@ -93,5 +98,15 @@ Route::group(['prefix' => 'admin', 'middleware' => ['jwt.auth', 'admin']], funct
     });
 });
 
+
+// Student Controller
+Route::prefix('student')->controller(StudentController::class)->group(function () {
+    Route::middleware('jwt.auth')->group(function () {
+        Route::get('/all-tutors', 'allTutors');
+        Route::get('/tutor-expertise-area', 'findTutorByExpertiseArea');
+        Route::get('/tutor/profile/{id}', 'tutorProfile');
+
+    });
+});
 
 

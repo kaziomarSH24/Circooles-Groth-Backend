@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('tutor_id')->constrained('tutor_infos')->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->integer('rating');
+            $table->float('rating');
             $table->text('comment');
             $table->timestamps();
         });

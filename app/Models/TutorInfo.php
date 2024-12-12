@@ -16,6 +16,7 @@ class TutorInfo extends Model
         'organization',
         'teaching_experience',
         'expertise_area',
+        'language',
         'degree',
         'institute',
         'graduation_year',
@@ -36,5 +37,10 @@ class TutorInfo extends Model
     public function tutorVerification()
     {
         return $this->hasOne(TutorVerification::class, 'tutor_id');
+    }
+
+    public function tutorReviews()
+    {
+        return $this->hasMany(TutorReview::class, 'tutor_id');
     }
 }

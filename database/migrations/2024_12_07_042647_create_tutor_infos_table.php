@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('address');
-            $table->string('description');
+            $table->text('description');
             $table->json('subjects_id');
             $table->string('designation');
             $table->string('organization');

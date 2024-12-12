@@ -22,6 +22,8 @@ class User extends Authenticatable implements JWTSubject
         'name',
         'email',
         'password',
+        'avatar',
+        'role',
         'google_id',
     ];
 
@@ -33,6 +35,8 @@ class User extends Authenticatable implements JWTSubject
     protected $hidden = [
         'password',
         'remember_token',
+        'otp',
+        'otp_expiry_at',
     ];
 
     /**
@@ -53,7 +57,7 @@ class User extends Authenticatable implements JWTSubject
       {
           return $this->getKey();
       }
-  
+
       public function getJWTCustomClaims()
       {
           return [];
@@ -68,5 +72,5 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(Transaction::class, 'buyer_id');
     }
-    
+
 }

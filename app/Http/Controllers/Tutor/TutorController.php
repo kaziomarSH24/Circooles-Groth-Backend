@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Validator;
 
 class TutorController extends Controller
 {
-    
+
     public function getTutor(Request $request)
     {
         $user = Auth::user();
@@ -89,6 +89,7 @@ class TutorController extends Controller
             'organization' => 'required|string',
             'teaching_experience' => 'required|string',
             'expertise_area' => 'required|string',
+            'language' => 'nullable|string',
             'degree' => 'required|string',
             'institute' => 'required|string',
             'graduation_year' => 'required|string',
@@ -116,6 +117,7 @@ class TutorController extends Controller
                 'organization' => $request->organization,
                 'teaching_experience' => $request->teaching_experience,
                 'expertise_area' => $request->expertise_area,
+                'language' => $request->language,
                 'degree' => $request->degree,
                 'institute' => $request->institute,
                 'graduation_year' => $request->graduation_year,
@@ -398,7 +400,7 @@ class TutorController extends Controller
     {
         $tutor = TutorInfo::where('user_id', Auth::user()->id)->first();
         $certificate = $tutor->tutorVerification ? $tutor->tutorVerification->academic_certificates : null;
-        
+
         return response()->json([
             'success' => true,
             'data' => $certificate,
