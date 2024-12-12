@@ -106,6 +106,13 @@ Route::prefix('student')->controller(StudentController::class)->group(function (
         Route::get('/tutor-expertise-area', 'findTutorByExpertiseArea');
         Route::get('/tutor/profile/{id}', 'tutorProfile');
 
+        //booking routes
+        Route::post('/book-tutor', 'bookTutor');
+
+        //booking callback
+        Route::get('/book-tutor/callback', 'bookingCallback')
+            ->name('tutor.booking.callback')->withoutMiddleware('jwt.auth');
+
     });
 });
 

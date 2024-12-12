@@ -245,6 +245,8 @@ class TutorController extends Controller
             $verify_payment_status = $tutor->tutorVerification->payment_status ?? null;
 
             if ($verify_payment_status === null || $verify_payment_status != 'paid') {
+
+                //initialize payment
                 $paystack = new PaystackService();
                 $response = $paystack->initializeTransaction([
                     'amount' => $request->verification_fee * 100,
@@ -356,6 +358,12 @@ class TutorController extends Controller
             if ($reference) {
                 $transaction = Transaction::where('reference', $reference)
                     ->first();
+                if($transaction->status === 'success'){
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Payment already verified',
+                    ]);
+                }
                 $tutorId = $transaction->buyer->tutorInfo->id;
 
                 $tutor_verification = TutorVerification::where('tutor_id', $tutorId)
