@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Transaction extends Model
 {
     protected $fillable = [
+        'seller_id',
         'buyer_id',
         'course_id',
         'amount',
@@ -18,7 +19,7 @@ class Transaction extends Model
     {
         return $this->belongsTo(User::class, 'buyer_id');
     }
-    
+
 
     public function course()
     {

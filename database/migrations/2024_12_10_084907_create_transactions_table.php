@@ -13,9 +13,10 @@ return new class extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('buyer_id')->constrained('users')->onDelete('cascade');  
+            $table->foreignId('seller_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('buyer_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('course_id')->nullable()->constrained('courses')->onDelete('cascade');
-            $table->decimal('amount', 10, 2);  
+            $table->decimal('amount', 10, 2);
             $table->string('reference')->unique();
             $table->enum('status', ['pending', 'success', 'failed'])->default('pending');
             $table->timestamps();

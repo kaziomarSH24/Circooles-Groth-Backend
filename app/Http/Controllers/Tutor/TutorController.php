@@ -7,6 +7,8 @@ use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\TutorInfo;
 use App\Models\TutorVerification;
+use App\Models\User;
+use App\Models\Wallets;
 use App\Services\PaystackService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -266,6 +268,7 @@ class TutorController extends Controller
 
                 if ($verify_payment_status != 'paid') {
                     $transaction = Transaction::create([
+                        'seller_id' => User::where('role', 'admin')->first()->id,
                         'buyer_id' => Auth::user()->id,
                         'buyer_type' => 'tutor',
                         'reference' => $response->data->reference,
@@ -344,66 +347,87 @@ class TutorController extends Controller
     //verify tutor callback
     public function tutorVerifyCallback(Request $request)
     {
-        $paystack = new PaystackService();
-        $reference = $request->query('reference');
-        $response = $paystack->verifyTransaction($reference);
+        DB::beginTransaction();
+        try {
+            $paystack = new PaystackService();
+            $reference = $request->query('reference');
+            $response = $paystack->verifyTransaction($reference);
 
-        if ($reference) {
-            $transaction = Transaction::where('reference', $reference)
-                ->first();
-            $tutorId = $transaction->buyer->tutorInfo->id;
+            if ($reference) {
+                $transaction = Transaction::where('reference', $reference)
+                    ->first();
+                $tutorId = $transaction->buyer->tutorInfo->id;
 
-            $tutor_verification = TutorVerification::where('tutor_id', $tutorId)
-                ->first();
-            if ($response->data->status === 'success') {
+                $tutor_verification = TutorVerification::where('tutor_id', $tutorId)
+                    ->first();
+                if ($response->data->status === 'success') {
 
-                $tutor_verification->update([
-                    'payment_status' => 'paid',
-                    'payment_url' => null,
-                ]);
+                    $tutor_verification->update([
+                        'payment_status' => 'paid',
+                        'payment_url' => null,
+                    ]);
 
-                $transaction->update([
-                    'status' => 'success',
-                ]);
+                    $transaction->update([
+                        'status' => 'success',
+                    ]);
 
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Payment successful',
-                    'data' => $tutor_verification,
-                ]);
-            } else {
-                $tutor_verification->update([
-                    'payment_status' => 'failed',
-                    'payment_url' => null,
-                ]);
+                    $balance = Wallets::where('user_id', $transaction->seller_id)->first()->balance;
+                    $balance += $transaction->amount;
 
-                $transaction->update([
-                    'status' => 'failed',
-                ]);
+                    Wallets::updateOrCreate(
+                        ['user_id' => $transaction->seller_id],
+                        [
+                            'balance' => $balance,
+                            'currency' => 'USD',
+                        ]
+                    );
 
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Payment failed',
-                    'data' => $tutor_verification,
-                ]);
+                    DB::commit();
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Payment successful',
+                        'data' => $tutor_verification,
+                    ]);
+                } else {
+                    $tutor_verification->update([
+                        'payment_status' => 'failed',
+                        'payment_url' => null,
+                    ]);
+
+                    $transaction->update([
+                        'status' => 'failed',
+                    ]);
+
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Payment failed',
+                        'data' => $tutor_verification,
+                    ]);
+                }
             }
-        }
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Payment failed',
-        ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid reference',
+            ]);
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
 
     public function checkMethod()
     {
-        $tutor = TutorInfo::where('user_id', Auth::user()->id)->first();
-        $certificate = $tutor->tutorVerification ? $tutor->tutorVerification->academic_certificates : null;
+        $admin_id = User::where('role', 'admin')->first()->id;
 
         return response()->json([
             'success' => true,
-            'data' => $certificate,
+            'data' => $admin_id,
         ]);
     }
 }
