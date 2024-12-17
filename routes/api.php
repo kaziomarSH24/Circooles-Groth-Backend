@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Student\StudentController;
+use App\Http\Controllers\Tutor\TutorAccountDetails;
 use App\Http\Controllers\Tutor\TutorController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -39,24 +40,31 @@ Route::controller(AuthController::class)->group(function () {
 
 
 // Tutor Controller
-Route::prefix('tutor')->controller(TutorController::class)->group(function () {
-    Route::middleware(['jwt.auth', 'tutor',])->group(function () {
-        Route::get('/', 'getTutor');
-        Route::put('/update-profile', 'updateTutorProfile');
-        Route::post('/verify-tutor-info', 'verifyTutorInfo');
-        Route::get('/verify-tutor-info', 'getTutorVerificationInfo');
+Route::group(['prefix' => 'tutor', 'middleware' => ['jwt.auth', 'tutor']], function () {
+    Route::controller(TutorController::class)->group(function () {
+            Route::get('/', 'getTutor');
+            Route::put('/update-profile', 'updateTutorProfile');
+            Route::post('/verify-tutor-info', 'verifyTutorInfo');
+            Route::get('/verify-tutor-info', 'getTutorVerificationInfo');
 
 
-
-
-        //tutor verify transaction callback
-        Route::get('/verify/callback','tutorVerifyCallback')
-              ->name('tutor.verify.callback')
-              ->withoutMiddleware(['jwt.auth', 'tutor']);
-        //check method
-        Route::get('/check-method', 'checkMethod');
+            //tutor verify transaction callback
+            Route::get('/verify/callback','tutorVerifyCallback')
+                  ->name('tutor.verify.callback')
+                  ->withoutMiddleware(['jwt.auth', 'tutor']);
+            //check method
+            Route::get('/check-method', 'checkMethod');
+    });
+    Route::prefix('account')->controller(TutorAccountDetails::class)->group(function () {
+        Route::post('/create/recipient', 'tutorRecipientAccount');
+        Route::get('/list/recipient', 'listRecipient');
+        Route::get('/fetch/recipient', 'fetchRecipient');
+        Route::put('/update/recipient', 'updateRecipient');
+        Route::delete('/delete/recipient', 'deleteRecipient');
     });
 });
+
+
 
 
 
@@ -108,6 +116,8 @@ Route::prefix('student')->controller(StudentController::class)->group(function (
 
         //booking routes
         Route::post('/book-tutor', 'bookTutor');
+        //refund booking routes
+        Route::post('/refund-booking/{booking_id}', 'refundAmount');
 
         //booking callback
         Route::get('/book-tutor/callback', 'bookingCallback')
@@ -115,5 +125,7 @@ Route::prefix('student')->controller(StudentController::class)->group(function (
 
     });
 });
+
+
 
 

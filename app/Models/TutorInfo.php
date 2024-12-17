@@ -43,4 +43,9 @@ class TutorInfo extends Model
     {
         return $this->hasMany(TutorReview::class, 'tutor_id');
     }
+
+    public function accountDetails()
+    {
+        return $this->hasOne(AccountDetails::class, 'tutor_id');
+    }
 }

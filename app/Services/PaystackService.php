@@ -38,6 +38,8 @@ class PaystackService
         } elseif ($method === 'PUT') {
             $options[CURLOPT_CUSTOMREQUEST] = 'PUT';
             $options[CURLOPT_POSTFIELDS] = json_encode($data);
+        } elseif ($method === 'DELETE') {
+            $options[CURLOPT_CUSTOMREQUEST] = 'DELETE';
         }
 
         curl_setopt_array($curl, $options);
@@ -46,7 +48,7 @@ class PaystackService
 
         return json_decode($response);
     }
-    
+
 
     //initialize transaction
     public function initializeTransaction($data)
@@ -108,6 +110,51 @@ class PaystackService
     public function updateSubaccount($code, $data)
     {
         return $this->sendRequest('PUT', "/subaccount/$code", $data);
+    }
+
+    //payment split
+    public function paymentSplit($data)
+    {
+        return $this->sendRequest('POST', '/split', $data);
+    }
+
+/**
+ * Transfer Recipients
+ */
+    //Transfers Recipients
+    public function createRecipient($data)
+    {
+        return $this->sendRequest('POST', '/transferrecipient', $data);
+    }
+
+    //List Transfer Recipients
+    public function listRecipient()
+    {
+        return $this->sendRequest('GET', '/transferrecipient');
+    }
+
+    //fetch transfer recipient
+    public function fetchRecipient($code)
+    {
+        return $this->sendRequest('GET', "/transferrecipient/$code");
+    }
+
+    //update transfer recipient
+    public function updateRecipient($code, $data)
+    {
+        return $this->sendRequest('PUT', "/transferrecipient/$code", $data);
+    }
+
+    //delete transfer recipient
+    public function deleteRecipient($code)
+    {
+        return $this->sendRequest('DELETE', "/transferrecipient/$code");
+    }
+
+    //transfer recipient
+    public function transferRecipient($data)
+    {
+        return $this->sendRequest('POST', '/transferrecipient', $data);
     }
 
     /* Transfer refund */

@@ -134,11 +134,15 @@ class StudentController extends Controller
             //transaction logic here
             $paystact = new PaystackService();
             $response = $paystact->initializeTransaction([
-                'amount' => $total_cost,
+                'amount' => $total_cost * 100,
                 'email' => auth()->user()->email,
                 'reference' => referenceId(),
+                // 'subaccount' => 'ACCT_lbpyasxb68g116g',
                 'metadata' => json_encode([
                     'booking_id' => $booking->id,
+                    'student_id' => auth()->id(),
+                    'booking_type' => 'tutor',
+                    'booking_time' => now()
                 ]),
                 'callback_url' => route('tutor.booking.callback')
             ]);
@@ -158,6 +162,51 @@ class StudentController extends Controller
             ]);
         } catch (\Exception $e) {
 
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    //refund booking amount
+    public function refundAmount($booking_id)
+    {
+        DB::beginTransaction();
+        try {
+            $booking = TutorBooking::find($booking_id);
+            $escrow = Escrow::where('booking_id', $booking_id)->first();
+
+            $paystact = new PaystackService();
+            $data = [
+                'transaction' => $escrow->reference_id,
+                'amount' => $escrow->hold_amount * 100,
+                // 'currency' => 'ZAR',
+                'customer_note' => 'Refund for booking',
+                'merchant_note' => 'Refund for booking',
+            ];
+            $response = $paystact->refund($data);
+
+            if ($response->status === false) {
+                throw new \Exception($response->message);
+            }
+
+            $booking->status = 'cancel';
+            $booking->save();
+
+            $escrow->status = 'refunded';
+            $escrow->refund_date = now();
+            $escrow->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Booking refunded successfully',
+                'data' => $response->data
+            ]);
+        } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -203,4 +252,8 @@ class StudentController extends Controller
             ]);
         }
     }
+
+
+    //payment split
+    
 }
