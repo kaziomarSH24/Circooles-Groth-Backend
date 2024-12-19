@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CourseController;
+use App\Http\Controllers\Admin\PaystackTransferController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Student\StudentController;
 use App\Http\Controllers\Tutor\TutorAccountDetails;
@@ -126,6 +127,12 @@ Route::prefix('student')->controller(StudentController::class)->group(function (
     });
 });
 
+//transfer routes
+
+Route::prefix('transfer')->controller(PaystackTransferController::class)->group(function () {
+    Route::post('/test', 'transfer');
+    Route::post('/transferToTutor', 'transferToTutor');
+});
 
 
 

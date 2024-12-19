@@ -119,7 +119,7 @@ class PaystackService
     }
 
 /**
- * Transfer Recipients
+ * Transfer Recipients start
  */
     //Transfers Recipients
     public function createRecipient($data)
@@ -151,11 +151,29 @@ class PaystackService
         return $this->sendRequest('DELETE', "/transferrecipient/$code");
     }
 
+    /**
+     * Transfer Recipients end
+     */
+
+
+    /**
+     * Transfer start
+     */
     //transfer recipient
-    public function transferRecipient($data)
+
+    public function transfer($data)
     {
-        return $this->sendRequest('POST', '/transferrecipient', $data);
+        return $this->sendRequest('POST', '/transfer', $data);
     }
+
+    //finalise transfer
+    public function finalizeTransfer($data)
+    {
+        return $this->sendRequest('POST', '/transfer/finalize_transfer', $data);
+    }
+
+
+
 
     /* Transfer refund */
     //refund
