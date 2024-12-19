@@ -10,14 +10,13 @@ class Lecture extends Model
     protected $fillable = [
         'curriculum_id',
         'title',
+        'slug',
         'description',
         'video_url',
-        'duration',
     ];
 
     public function curriculum(): BelongsTo
     {
         return $this->belongsTo(Curriculum::class);
     }
-
 }

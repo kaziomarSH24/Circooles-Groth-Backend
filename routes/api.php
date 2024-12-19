@@ -104,6 +104,14 @@ Route::group(['prefix' => 'admin', 'middleware' => ['jwt.auth', 'admin']], funct
         Route::get('/curriculum/{course_id}', 'getCurriculum');
         Route::post('/curriculum/store/{course_id}', 'storeCurriculum');
         Route::put('/curriculum/update/{id}', 'updateCurriculum');
+        Route::delete('/curriculum/destroy/{id}', 'destroyCurriculum');
+
+        //lesson routes
+        Route::get('/lecture/{curriculum_id}', 'getLecture');
+        Route::post('/lecture/store/{curriculum_id}', 'storeLecture');
+        Route::put('/lecture/update/{id}', 'updateLecture');
+        Route::delete('/lecture/destroy/{id}', 'destroyLecture');
+
     });
 });
 

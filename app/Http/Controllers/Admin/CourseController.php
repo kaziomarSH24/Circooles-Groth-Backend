@@ -4,27 +4,44 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Models\Curriculum;
+use App\Models\Lecture;
 use App\Services\PaystackService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use phpseclib3\Crypt\RC2;
 
 class CourseController extends Controller
 {
     /*==============
-    Course Controller
+    Course Section
     ==============*/
 
     //get course
     public function indexCourse(Request $request)
     {
+        $sortBy = $request->sort_by == 'latest' ? 'desc' : 'asc';
+        $rating = $request->rating;
+        $category = $request->category_id;
+        $searchByTitle = $request->search_by_title;
         $courses = Course::with('category', 'subCategory')
-            ->orderBy('created_at', 'desc')
+            ->when($searchByTitle, function ($query, $searchByTitle) {
+                return $query->where('title', 'like', '%' . $searchByTitle . '%');
+            })
+            ->when($category, function ($query, $category) {
+                return $query->where('category_id', $category);
+            })
+            // ->when($rating, function ($query, $rating) {
+            //     return $query->where('rating', '>=', $rating);
+            // })
+            ->orderBy('created_at', $sortBy)
             ->paginate($request->per_page ?? 10);
 
         $courses->transform(function ($course) {
             return [
+                'id' => $course->id,
                 'title' => $course->title,
                 'subtitle' => $course->subtitle,
                 'slug' => $course->slug,
@@ -163,7 +180,8 @@ class CourseController extends Controller
     }
 
     //update course
-    public function updateCourse(Request $request, $id){
+    public function updateCourse(Request $request, $id)
+    {
         try {
             $course = Course::find($id);
             if (!$course) {
@@ -222,10 +240,10 @@ class CourseController extends Controller
                 if (!file_exists(public_path('uploads/admin/course/video'))) {
                     mkdir(public_path('uploads/admin/course/video'), 0777, true);
                 }
-                
+
                 $trailer_slug = Str::slug(pathinfo($trailer_video->getClientOriginalName(), PATHINFO_FILENAME));
                 $trailer_slug = $trailer_slug . '.' . $trailer_video->extension();
-                $trailer_video_name = time() . '_' .$trailer_slug;
+                $trailer_video_name = time() . '_' . $trailer_slug;
                 $trailer_video->move(public_path('uploads/admin/course/video'), $trailer_video_name);
             }
             //create url
@@ -292,12 +310,18 @@ class CourseController extends Controller
         ]);
     }
 
+    //search course in online program section
+    // public function searcCourse(Request $request){
+
+
+    // }
+
     /*==============
-    End Course Controller
+    End Course section
     ==============*/
 
     /*==============
-    Curriculam Controller
+    Curriculam Section
     =================*/
 
     //get curriculum
@@ -350,8 +374,165 @@ class CourseController extends Controller
             'message' => 'Curriculum created successfully',
             'curriculum' => $curriculum,
         ]);
-
     }
 
-    
+    public function updateCurriculum(Request $request, $id)
+    {
+        $curriculum = Curriculum::find($id);
+        if (!$curriculum) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Curriculum not found',
+            ], 404);
+        }
+        $validator = Validator::make($request->all(), [
+            'section_name' => 'required|string|max:255',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors(),
+            ], 400);
+        }
+        $curriculum->section_name = $request->section_name;
+        $curriculum->save();
+        return response()->json([
+            'success' => true,
+            'message' => 'Curriculum updated successfully',
+            'curriculum' => $curriculum,
+        ]);
+    }
+
+    //destroy curriculum
+    public function destroyCurriculum($id)
+    {
+        $curriculum = Curriculum::find($id);
+        if (!$curriculum) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Curriculum not found',
+            ], 404);
+        }
+        $curriculum->delete();
+        return response()->json([
+            'success' => true,
+            'message' => 'Curriculum deleted successfully',
+        ]);
+    }
+
+    /*======================
+    End Curriculum Section
+    ========================*/
+
+    /*======================
+    Lesson Section
+    ========================*/
+
+    //get lesson
+    public function getLecture($curriculum_id)
+    {
+        $curriculum = Curriculum::find($curriculum_id);
+        if (!$curriculum) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Curriculum not found',
+            ], 404);
+        }
+        $lectures = $curriculum->lectures;
+        if ($lectures->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lesson not found',
+            ], 404);
+        }
+        return response()->json([
+            'success' => true,
+            'lectures' => $lectures,
+        ]);
+    }
+
+    //store lesson
+    public function storeLecture(Request $request, $curriculum_id)
+    {
+        $curriculum = Curriculum::find($curriculum_id);
+        if (!$curriculum) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Curriculum not found',
+            ], 404);
+        }
+        $validator = Validator::make($request->all(), [
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'video_url' => 'required|string',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors(),
+            ], 400);
+        }
+
+        $lecture = $curriculum->lectures()->create([
+            'title' => $request->title,
+            'slug' => generateUniqueSlug(Lecture::class, $request->title),
+            'description' => $request->description,
+            'video_url' => $request->video_url,
+        ]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Lesson created successfully',
+            'lecture' => $lecture,
+        ], 201);
+    }
+
+    //update lesson
+    public function updateLecture(Request $request, $id)
+    {
+        $lecture = Lecture::findOrFail($id);
+        if (!$lecture) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lesson not found',
+            ], 404);
+        }
+        $validator = Validator::make($request->all(), [
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'video_url' => 'required|string',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors(),
+            ], 400);
+        }
+        $lecture->title = $request->title;
+        $lecture->slug = generateUniqueSlug(Lecture::class, $request->title);
+        $lecture->description = $request->description;
+        $lecture->video_url = $request->video_url;
+        $lecture->save();
+        return response()->json([
+            'success' => true,
+            'message' => 'Lesson updated successfully',
+            'lecture' => $lecture,
+        ], 201);
+    }
+
+    //destroy lesson
+    public function destroyLecture($id)
+    {
+        $lecture = Lecture::find($id);
+        if (!$lecture) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lesson not found',
+            ], 404);
+        }
+        $lecture->delete();
+        return response()->json([
+            'success' => true,
+            'message' => 'Lesson deleted successfully',
+        ], 200);
+    }
 }
