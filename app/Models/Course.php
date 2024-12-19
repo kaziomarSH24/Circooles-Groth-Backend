@@ -46,10 +46,15 @@ class Course extends Model
     {
         return $this->belongsTo(SubCategory::class);
     }
-    
+
     public function curriculum()
     {
         return $this->hasMany(Curriculum::class);
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
     }
 
 

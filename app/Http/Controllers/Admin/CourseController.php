@@ -26,16 +26,18 @@ class CourseController extends Controller
         $rating = $request->rating;
         $category = $request->category_id;
         $searchByTitle = $request->search_by_title;
-        $courses = Course::with('category', 'subCategory')
+        $courses = Course::with('category', 'subCategory', 'reviews')
             ->when($searchByTitle, function ($query, $searchByTitle) {
                 return $query->where('title', 'like', '%' . $searchByTitle . '%');
             })
             ->when($category, function ($query, $category) {
                 return $query->where('category_id', $category);
             })
-            // ->when($rating, function ($query, $rating) {
-            //     return $query->where('rating', '>=', $rating);
-            // })
+            ->when($rating, function ($query, $rating) {
+               return $query->whereHas('reviews', function ($q) use ($rating) {
+                  $q->havingRaw('AVG(rating) >= ?', [$rating]);
+               });
+            })
             ->orderBy('created_at', $sortBy)
             ->paginate($request->per_page ?? 10);
 
@@ -59,6 +61,7 @@ class CourseController extends Controller
                 'targer_audience' => json_decode($course->targer_audience),
                 'requirements' => json_decode($course->requirements),
                 'total_enrollment' => $course->total_enrollment,
+                'rating' => $course->reviews->avg('rating'),
                 'created_at' => $course->created_at,
                 'updated_at' => $course->updated_at,
 
