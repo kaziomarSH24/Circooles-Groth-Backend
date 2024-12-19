@@ -253,7 +253,4 @@ class StudentController extends Controller
         }
     }
 
-
-    //payment split
-    
 }

@@ -62,6 +62,7 @@ class CourseController extends Controller
                 'requirements' => json_decode($course->requirements),
                 'total_enrollment' => $course->total_enrollment,
                 'rating' => $course->reviews->avg('rating'),
+                'total_reviews' => $course->reviews->count(),
                 'created_at' => $course->created_at,
                 'updated_at' => $course->updated_at,
 

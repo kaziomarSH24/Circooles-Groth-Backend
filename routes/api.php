@@ -43,18 +43,18 @@ Route::controller(AuthController::class)->group(function () {
 // Tutor Controller
 Route::group(['prefix' => 'tutor', 'middleware' => ['jwt.auth', 'tutor']], function () {
     Route::controller(TutorController::class)->group(function () {
-            Route::get('/', 'getTutor');
-            Route::put('/update-profile', 'updateTutorProfile');
-            Route::post('/verify-tutor-info', 'verifyTutorInfo');
-            Route::get('/verify-tutor-info', 'getTutorVerificationInfo');
+        Route::get('/', 'getTutor');
+        Route::put('/update-profile', 'updateTutorProfile');
+        Route::post('/verify-tutor-info', 'verifyTutorInfo');
+        Route::get('/verify-tutor-info', 'getTutorVerificationInfo');
 
 
-            //tutor verify transaction callback
-            Route::get('/verify/callback','tutorVerifyCallback')
-                  ->name('tutor.verify.callback')
-                  ->withoutMiddleware(['jwt.auth', 'tutor']);
-            //check method
-            Route::get('/check-method', 'checkMethod');
+        //tutor verify transaction callback
+        Route::get('/verify/callback', 'tutorVerifyCallback')
+            ->name('tutor.verify.callback')
+            ->withoutMiddleware(['jwt.auth', 'tutor']);
+        //check method
+        Route::get('/check-method', 'checkMethod');
     });
     Route::prefix('account')->controller(TutorAccountDetails::class)->group(function () {
         Route::post('/create/recipient', 'tutorRecipientAccount');
@@ -70,14 +70,36 @@ Route::group(['prefix' => 'tutor', 'middleware' => ['jwt.auth', 'tutor']], funct
 
 
 
-// Admin Controller
+// Admin Routes
 Route::group(['prefix' => 'admin', 'middleware' => ['jwt.auth', 'admin']], function () {
 
+    //admin controller
     Route::controller(AdminController::class)->group(function () {
         Route::get('/subject', 'getSubject');
         Route::post('/subject/store', 'storeSubject');
         Route::delete('/subject/destroy/{id}', 'destroySubject');
+
+        //all users
+        Route::prefix('users')->group(function () {
+            Route::get('/all', 'allUsers');
+            Route::delete('/destroy/{id}', 'destroyUser');
+        });
+
+        //tutor verification info
+        Route::prefix('tutor')->group(function () {
+            Route::get('/verify-info', 'allTutorVerificationInfo');
+            Route::get('/verify-info/{id}', 'getTutorVerificationInfo');
+            Route::put('/verify-status/{id}', 'updateTutorVerifyStatus');
+            Route::delete('/verify-info/{id}', 'verifyTutorInfo');
+        });
+
+        //transactions history
+        Route::prefix('transactions')->group(function () {
+            Route::get('/', 'transactions');
+        });
     });
+
+    //admin category controller
     Route::prefix('category')->controller(CategoryController::class)->group(function () {
         Route::get('/', 'index');
         Route::post('/store', 'store');
@@ -111,7 +133,6 @@ Route::group(['prefix' => 'admin', 'middleware' => ['jwt.auth', 'admin']], funct
         Route::post('/lecture/store/{curriculum_id}', 'storeLecture');
         Route::put('/lecture/update/{id}', 'updateLecture');
         Route::delete('/lecture/destroy/{id}', 'destroyLecture');
-
     });
 });
 
@@ -131,7 +152,6 @@ Route::prefix('student')->controller(StudentController::class)->group(function (
         //booking callback
         Route::get('/book-tutor/callback', 'bookingCallback')
             ->name('tutor.booking.callback')->withoutMiddleware('jwt.auth');
-
     });
 });
 
@@ -141,6 +161,3 @@ Route::prefix('transfer')->controller(PaystackTransferController::class)->group(
     Route::post('/test', 'transfer');
     Route::post('/transferToTutor', 'transferToTutor');
 });
-
-
-
