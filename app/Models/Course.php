@@ -57,5 +57,14 @@ class Course extends Model
         return $this->hasMany(Review::class);
     }
 
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
+    public function checkouts()
+    {
+        return $this->hasMany(Checkout::class);
+    }
 
 }

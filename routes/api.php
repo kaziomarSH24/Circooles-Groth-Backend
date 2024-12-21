@@ -7,15 +7,14 @@ use App\Http\Controllers\Admin\PaystackTransferController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Student\CourseBookingController;
+use App\Http\Controllers\Student\DashboardController;
 use App\Http\Controllers\Student\StudentController;
 use App\Http\Controllers\Tutor\TutorAccountDetails;
 use App\Http\Controllers\Tutor\TutorController;
 use App\Services\PaystackService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-
-
-
+use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
 
 //Home Controller
 Route::controller(HomeController::class)->group(function () {
@@ -178,6 +177,14 @@ Route::group(['prefix' => 'student', 'middleware' => 'jwt.auth'], function () {
         //course payment callback
         Route::get('/course-payment/callback', 'coursePaymentCallback')
             ->name('course.payment.callback')->withoutMiddleware('jwt.auth');
+    });
+
+    //dashboard routes
+    Route::controller(DashboardController::class)->group(function () {
+        Route::get('/dashboard', 'dashboard');
+        Route::get('enrolled-courses', 'enrolledCourses');
+        Route::get('my-tutor', 'myTutor');
+        Route::get('upcoming-session', 'upcomingSessions');
     });
 });
 

@@ -52,16 +52,16 @@ class User extends Authenticatable implements JWTSubject
         ];
     }
 
-      // Implement JWTSubject methods
-      public function getJWTIdentifier()
-      {
-          return $this->getKey();
-      }
+    // Implement JWTSubject methods
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
 
-      public function getJWTCustomClaims()
-      {
-          return [];
-      }
+    public function getJWTCustomClaims()
+    {
+        return [];
+    }
 
     public function tutorInfo()
     {
@@ -78,4 +78,14 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Review::class);
     }
 
+    //checkout relationship
+    public function checkouts()
+    {
+        return $this->hasMany(Checkout::class);
+    }
+
+    public function tutorBookings()
+    {
+        return $this->hasMany(TutorBooking::class, 'student_id');
+    }
 }

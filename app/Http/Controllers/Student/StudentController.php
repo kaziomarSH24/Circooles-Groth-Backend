@@ -124,7 +124,7 @@ class StudentController extends Controller
             $booking = new TutorBooking();
             $booking->tutor_id = $request->tutor_id;
             $booking->student_id = auth()->id();
-            $booking->schedule = json_encode($request->schedule);
+            $booking->schedule = $request->schedule;
             $booking->repeat = $request->repeat ?? null;
             $booking->session_quantity = $request->session_quantity;
             $booking->session_cost = $request->session_cost;

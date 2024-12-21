@@ -16,11 +16,11 @@ class CourseBookingController extends Controller
     public function courseBooking(Request $request)
     {
         DB::beginTransaction();
-        try{
+        try {
             if (isset($request->course_id)) {
                 $course = Course::find($request->course_id);
                 if (!$course) {
-                   throw new \Exception('Course not found');
+                    throw new \Exception('Course not found');
                 }
 
                 $data = [
@@ -42,7 +42,7 @@ class CourseBookingController extends Controller
                 $response = $paystack->initializeTransaction($data);
 
                 if ($response->status === false) {
-                   throw new \Exception($response->message);
+                    throw new \Exception($response->message);
                 }
 
                 if ($response->status === true) {
@@ -62,10 +62,10 @@ class CourseBookingController extends Controller
                         'data' => $response->data
                     ]);
                 }
-            }else{
+            } else {
                 throw new \Exception('Course id is required');
             }
-        }catch (\Exception $e){
+        } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -79,19 +79,19 @@ class CourseBookingController extends Controller
     public function coursePaymentCallback(Request $request)
     {
         DB::beginTransaction();
-        try{
-        $reference = $request->reference;
-        $paystack = new PaystackService();
-        $response = $paystack->verifyTransaction($reference);
+        try {
+            $reference = $request->reference;
+            $paystack = new PaystackService();
+            $response = $paystack->verifyTransaction($reference);
 
-        if ($response->status === false) {
-            throw new \Exception($response->message);
-        }
+            if ($response->status === false) {
+                throw new \Exception($response->message);
+            }
 
-        $is_checkout_exist = Checkout::where('reference_id', $reference)->first();
-        if ($is_checkout_exist) {
-            throw new \Exception('Payment already processed');
-        }
+            $is_checkout_exist = Checkout::where('reference_id', $reference)->first();
+            if ($is_checkout_exist) {
+                throw new \Exception('Payment already processed');
+            }
 
             $checkout = new Checkout();
             $checkout->user_id = $response->data->metadata->user_id;
@@ -104,8 +104,12 @@ class CourseBookingController extends Controller
             $transaction->status = 'success';
             $transaction->save();
 
+            $course = Course::find($response->data->metadata->course_id);
+            $course->total_enrollment += 1;
+            $course->save();
+
             $balance = Wallets::where('user_id', $transaction->seller_id)->first()->balance;
-            if(!$balance){
+            if (!$balance) {
                 $balance = 0;
             }
             $balance += $transaction->amount;
@@ -121,7 +125,7 @@ class CourseBookingController extends Controller
                 'message' => 'Course payment successful',
                 'data' => $response->data
             ]);
-        }catch (\Exception $e){
+        } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'success' => false,

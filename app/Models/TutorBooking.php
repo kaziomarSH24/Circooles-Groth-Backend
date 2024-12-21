@@ -32,4 +32,9 @@ class TutorBooking extends Model
     {
         return $this->hasOne(Escrow::class, 'booking_id');
     }
+
+    public function tutor()
+    {
+        return $this->belongsTo(tutorInfo::class, 'tutor_id');
+    }
 }
