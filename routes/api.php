@@ -5,11 +5,28 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\PaystackTransferController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\Student\CourseBookingController;
 use App\Http\Controllers\Student\StudentController;
 use App\Http\Controllers\Tutor\TutorAccountDetails;
 use App\Http\Controllers\Tutor\TutorController;
+use App\Services\PaystackService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+
+
+
+//Home Controller
+Route::controller(HomeController::class)->group(function () {
+    Route::get('/categories', 'allCategory');
+});
+
+
+
+
+
+
 
 // Auth Controller
 Route::controller(AuthController::class)->group(function () {
@@ -116,9 +133,9 @@ Route::group(['prefix' => 'admin', 'middleware' => ['jwt.auth', 'admin']], funct
     });
 
     Route::prefix('course')->controller(CourseController::class)->group(function () {
-        Route::get('/', 'indexCourse');
+        Route::get('/', 'indexCourse')->withoutMiddleware(['jwt.auth', 'admin']);
         Route::post('/store', 'storeCourse');
-        Route::get('/show/{id}', 'showCourse');
+        Route::get('/show/{id}', 'showCourse')->withoutMiddleware(['jwt.auth', 'admin']);
         Route::put('/update/{id}', 'updateCourse');
         Route::delete('/destroy/{id}', 'destroyCourse');
 
@@ -138,8 +155,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['jwt.auth', 'admin']], funct
 
 
 // Student Controller
-Route::prefix('student')->controller(StudentController::class)->group(function () {
-    Route::middleware('jwt.auth')->group(function () {
+Route::group(['prefix' => 'student', 'middleware' => 'jwt.auth'], function () {
+    Route::controller(StudentController::class)->group(function () {
         Route::get('/all-tutors', 'allTutors');
         Route::get('/tutor-expertise-area', 'findTutorByExpertiseArea');
         Route::get('/tutor/profile/{id}', 'tutorProfile');
@@ -153,9 +170,25 @@ Route::prefix('student')->controller(StudentController::class)->group(function (
         Route::get('/book-tutor/callback', 'bookingCallback')
             ->name('tutor.booking.callback')->withoutMiddleware('jwt.auth');
     });
+
+    //course booking routes
+    Route::controller(CourseBookingController::class)->group(function () {
+        Route::post('/course-booking', 'courseBooking');
+
+        //course payment callback
+        Route::get('/course-payment/callback', 'coursePaymentCallback')
+            ->name('course.payment.callback')->withoutMiddleware('jwt.auth');
+    });
 });
 
 //transfer routes
+
+//paymetn verify
+Route::get('/payment/verify', function (Request $request) {
+    $paystack = new PaystackService();
+    $response = $paystack->verifyTransaction($request->reference);
+    return response()->json(['response' => $response]);
+});
 
 Route::prefix('transfer')->controller(PaystackTransferController::class)->group(function () {
     Route::post('/test', 'transfer');

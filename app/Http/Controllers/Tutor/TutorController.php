@@ -380,6 +380,9 @@ class TutorController extends Controller
                     ]);
 
                     $balance = Wallets::where('user_id', $transaction->seller_id)->first()->balance;
+                    if (!$balance) {
+                        $balance = 0;
+                    }
                     $balance += $transaction->amount;
 
                     Wallets::updateOrCreate(

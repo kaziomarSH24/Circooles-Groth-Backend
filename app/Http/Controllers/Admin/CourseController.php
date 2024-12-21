@@ -167,16 +167,76 @@ class CourseController extends Controller
     //show course
     public function showCourse($id)
     {
-        $course = Course::with('category', 'subCategory')->find($id);
-        $course->teach_course = json_decode($course->teach_course);
-        $course->targer_audience = json_decode($course->targer_audience);
-        $course->requirements = json_decode($course->requirements);
+        $course = Course::with('category', 'subCategory','reviews','curriculum.lectures')->find($id);
         if (!$course) {
             return response()->json([
                 'success' => false,
                 'message' => 'Course not found',
             ], 404);
         }
+        $course = [
+            'id' => $course->id,
+            'title' => $course->title,
+            'subtitle' => $course->subtitle,
+            'slug' => $course->slug,
+            'price' => $course->price,
+            'category' => $course->category->name,
+            'sub_category' => $course->subCategory->name,
+            'topic' => $course->topic,
+            'language' => $course->language,
+            'c_level' => $course->c_level,
+            'duration' => $course->duration,
+            'thumbnail' => $course->thumbnail,
+            'trailer_video' => $course->trailer_video,
+            'description' => $course->description,
+            'teach_course' => json_decode($course->teach_course),
+            'targer_audience' => json_decode($course->targer_audience),
+            'requirements' => json_decode($course->requirements),
+            'total_enrollment' => $course->total_enrollment,
+            'rating' => $course->reviews->avg('rating'),
+            'total_reviews' => $course->reviews->count(),
+            'total_section' => $course->curriculum->count(),
+            'total_lecture' => $course->curriculum->sum(function ($curriculum) {
+                return $curriculum->lectures->count();
+            }),
+            'created_at' => $course->created_at,
+            'updated_at' => $course->updated_at->format('d/m/Y'),
+            'last_updated' => optional(
+                $course->curriculum->last(fn($curriculum) =>
+                    $curriculum->lectures->last(fn($lecture) => $lecture !== null)
+                )
+            )->updated_at?->format('d/m/Y'),
+            'curriculum' => $course->curriculum->transform(function ($curriculum) {
+                return [
+                    'id' => $curriculum->id,
+                    'section_name' => $curriculum->section_name,
+                    'lectures' => $curriculum->lectures->transform(function ($lecture) {
+                        return [
+                            'id' => $lecture->id,
+                            'title' => $lecture->title,
+                            'slug' => $lecture->slug,
+                            'description' => $lecture->description,
+                            'video_url' => $lecture->video_url,
+                            'created_at' => $lecture->created_at,
+                            'updated_at' => $lecture->updated_at,
+                        ];
+                    }),
+                ];
+            }),
+            'reviews' => $course->reviews->transform(function ($review) {
+                return [
+                    'id' => $review->id,
+                    'user_id' => $review->user_id,
+                    'user_name' => $review->user->name,
+                    'rating' => $review->rating,
+                    'comment' => $review->comment,
+                    'created_at' => $review->created_at->diffForHumans(),
+                ];
+            }),
+
+        ];
+
+
         return response()->json([
             'success' => true,
             'course' => $course,
