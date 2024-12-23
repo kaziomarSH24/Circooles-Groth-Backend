@@ -24,6 +24,7 @@ class DashboardController extends Controller
         $courses->getCollection()->transform(function ($course) {
             return [
                 'id' => $course->id,
+                'course_id' => $course->course->id,
                 'title' => $course->course->title,
                 'slug' => $course->course->slug,
                 'thumbnail' => $course->course->thumbnail,

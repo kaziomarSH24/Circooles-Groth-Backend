@@ -5,13 +5,16 @@ namespace App\Http\Controllers\Tutor;
 use App\Http\Controllers\Controller;
 use App\Models\Subject;
 use App\Models\Transaction;
+use App\Models\TutorBooking;
 use App\Models\TutorInfo;
 use App\Models\TutorVerification;
 use App\Models\User;
 use App\Models\Wallets;
 use App\Services\PaystackService;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Validator;
@@ -358,7 +361,7 @@ class TutorController extends Controller
             if ($reference) {
                 $transaction = Transaction::where('reference', $reference)
                     ->first();
-                if($transaction->status === 'success'){
+                if ($transaction->status === 'success') {
                     return response()->json([
                         'success' => true,
                         'message' => 'Payment already verified',
@@ -432,6 +435,61 @@ class TutorController extends Controller
     }
 
 
+
+    //get tutor upcoming sessions
+    public function upcomingSessions(Request $request)
+    {
+        $perPage = $request->per_page;
+        $sessionss = Auth::user()->tutorInfo->tutorBookings()->with('student')->where('status', 'enrolled')->get();
+
+        if ($sessionss->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No session found'
+            ]);
+        }
+
+        $sessions = $sessionss->transform(function ($session) {
+            $schedules = collect(json_decode($session->schedule, true));
+            return [
+                'id' => $session->id,
+                'student_id' => $session->student_id,
+                'student_name' => $session->student->name,
+                'schedule' => $schedules,
+                'zoom_link' => $session->zoom_link,
+            ];
+        });
+        $today = Carbon::today()->toDateString();
+        $upcoming = [];
+        foreach ($sessions as $session) {
+            foreach ($session['schedule'] as $schedule) {
+                $upcoming[] = [
+                    'student' => $session['student_name'],
+                    'date' => $schedule['date'],
+                    'day' => $schedule['day'],
+                    'time' => $schedule['time'],
+                    'status' => $schedule['date'] >= $today ? 'upcoming' : 'past',
+                    'zoom_link' => $session['zoom_link'],
+                ];
+            }
+        }
+
+        $upcomingCollection = collect($upcoming)->sortByDesc('date');
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        $currentPageItems = $upcomingCollection->slice(($currentPage - 1) * $perPage, $perPage)->all();
+        $upcomingPaginated = new LengthAwarePaginator(
+            $currentPageItems,
+            count($upcomingCollection),
+            $perPage);
+        $upcomingPaginated->setPath($request->url());
+        return response()->json([
+            'success' => true,
+            'data' => $upcomingPaginated,
+            'session' => $upcoming,
+        ]);
+    }
+
+
     public function checkMethod()
     {
         $admin_id = User::where('role', 'admin')->first()->id;
@@ -440,5 +498,33 @@ class TutorController extends Controller
             'success' => true,
             'data' => $admin_id,
         ]);
+    }
+
+    //update tutor session link
+    public function updateLink(Request $request)
+    {
+        $date = $request->date;
+        $zoom_link = $request->zoom_link;
+        $tutor_id = Auth::user()->tutorInfo->id;
+        $booking_schedule = TutorBooking::where('tutor_id', $tutor_id)
+            ->get();
+
+            // dd($booking_schedule);
+
+        $schedules = $booking_schedule->map(function ($schedule) use ($date, $zoom_link) {
+            $schedule = json_decode($schedule->schedule, true);
+            foreach ($schedule as $key => $value) {
+                if ($value['date'] == $date) {
+                    $schedule[$key]['zoom_link'] = $zoom_link;
+                }
+            }
+            return $schedule;
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $schedules,
+        ]);
+
     }
 }

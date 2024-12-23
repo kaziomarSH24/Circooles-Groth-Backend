@@ -61,6 +61,8 @@ Route::group(['prefix' => 'tutor', 'middleware' => ['jwt.auth', 'tutor']], funct
     Route::controller(TutorController::class)->group(function () {
         Route::get('/', 'getTutor');
         Route::put('/update-profile', 'updateTutorProfile');
+        Route::get('/upcoming-session', 'upcomingSessions');
+        Route::put('/update-link', 'updateLink');
         Route::post('/verify-tutor-info', 'verifyTutorInfo');
         Route::get('/verify-tutor-info', 'getTutorVerificationInfo');
 

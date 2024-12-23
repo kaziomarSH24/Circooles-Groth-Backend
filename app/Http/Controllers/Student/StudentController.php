@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
 use App\Models\Escrow;
+use App\Models\Schedule;
 use App\Models\Subject;
 use App\Models\TutorBooking;
 use App\Models\TutorInfo;
 use App\Services\PaystackService;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Types\Relations\Car;
 
 class StudentController extends Controller
 {
@@ -113,23 +116,44 @@ class StudentController extends Controller
         try {
             $request->validate([
                 'tutor_id' => 'required',
-                'schedule' => 'required',
+                'schedule' => 'required|array',
+                'schedule.*.date' => 'required|string',
+                'schedule.*.time' => 'required|string',
+                'type' => 'required|string',
                 'repeat' => 'nullable|string',
-                'session_quantity' => 'required|integer',
                 'session_cost' => 'required',
             ]);
 
-            $total_cost = $request->session_cost * $request->session_quantity;
+            $session_quantity = count($request->schedule);
+
+            $total_cost = $request->session_cost * $session_quantity;
             //booking logic here
             $booking = new TutorBooking();
             $booking->tutor_id = $request->tutor_id;
             $booking->student_id = auth()->id();
-            $booking->schedule = $request->schedule;
             $booking->repeat = $request->repeat ?? null;
-            $booking->session_quantity = $request->session_quantity;
+            $booking->session_quantity = $session_quantity;
             $booking->session_cost = $request->session_cost;
             $booking->total_cost = $total_cost;
             $booking->save();
+
+            $schedule = $request->input('schedule');
+
+            foreach ($schedule as $value) {
+                $times = explode('-', $value['time']);
+                $startTime = $value['date'] . ' ' . $times[0];
+                $endTime = $value['date'] . ' ' . $times[1];
+
+                $startTimestamp = Carbon::parse($startTime)->format('Y-m-d H:i:s');
+                $endTimestamp = Carbon::parse($endTime)->format('Y-m-d H:i:s');
+
+            $schedules = new Schedule();
+            $schedules->tutor_booking_id = $booking->id;
+            $schedules->start_time = $startTimestamp;
+            $schedules->end_time = $endTimestamp;
+            $schedules->type = $request->type;
+            $schedules->save();
+            }
 
             //transaction logic here
             $paystact = new PaystackService();
@@ -230,6 +254,8 @@ class StudentController extends Controller
             $booking->status = 'enrolled';
             $booking->save();
 
+            Schedule::where('tutor_booking_id', $booking->id)->update(['status' => 'success']);
+
             $escrow = new Escrow();
             $escrow->booking_id = $booking->id;
             $escrow->hold_amount = $booking->total_cost;
@@ -252,5 +278,4 @@ class StudentController extends Controller
             ]);
         }
     }
-
 }

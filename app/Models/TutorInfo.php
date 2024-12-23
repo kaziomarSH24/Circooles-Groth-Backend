@@ -48,4 +48,9 @@ class TutorInfo extends Model
     {
         return $this->hasOne(AccountDetails::class, 'tutor_id');
     }
+
+    public function tutorBookings()
+    {
+        return $this->hasMany(TutorBooking::class, 'tutor_id');
+    }
 }

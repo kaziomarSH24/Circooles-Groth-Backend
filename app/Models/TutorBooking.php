@@ -10,7 +10,6 @@ class TutorBooking extends Model
         'tutor_id',
         'student_id',
         'course_id',
-        'schedule',
         'repeat',
         'session_quantity',
         'session_cost',
@@ -36,5 +35,10 @@ class TutorBooking extends Model
     public function tutor()
     {
         return $this->belongsTo(tutorInfo::class, 'tutor_id');
+    }
+
+    public function schedule()
+    {
+        return $this->hasMany(Schedule::class, 'tutor_booking_id');
     }
 }

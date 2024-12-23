@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('tutor_id')->constrained('tutor_infos')->onDelete('cascade');
             $table->foreignId('student_id')->constrained('users')->onDelete('cascade');
-            $table->json('schedule');
+            // $table->json('schedule');
             $table->enum('repeat', ['daily', 'weekly', 'bi-weekly', 'monthly'])->nullable(); //if null then it's not a repeat session
             $table->integer('session_quantity');
             $table->decimal('session_cost', 10, 2);

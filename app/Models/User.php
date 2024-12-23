@@ -65,7 +65,7 @@ class User extends Authenticatable implements JWTSubject
 
     public function tutorInfo()
     {
-        return $this->hasOne(TutorInfo::class);
+        return $this->hasOne(TutorInfo::class, 'user_id');
     }
 
     public function transactions()
