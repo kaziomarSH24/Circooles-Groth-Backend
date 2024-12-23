@@ -87,78 +87,15 @@ class DashboardController extends Controller
         ]);
     }
 
-
-    //upcomming sessions
-    // public function upcomingSessions(Request $request)
-    // {
-    //     $perPage = $request->per_page;
-    //     $sessionss = auth()->user()->tutorBookings()->where('status', 'enrolled')->get();
-    //     if ($sessionss->isEmpty()) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'No session found'
-    //         ]);
-    //     }
-    //     $sessions = $sessionss->transform(function ($session) {
-    //         $schedules = collect(json_decode($session->schedule, true));
-    //         return [
-    //             'id' => $session->id,
-    //             'tutor_id' => $session->tutor_id,
-    //             'tutor_name' => $session->tutor->user->name,
-    //             'schedule' => $schedules,
-    //         ];
-    //     });
-    //     $today = Carbon::today()->toDateString();
-    //     $upcoming = [];
-    //     foreach ($sessions as $session) {
-    //         foreach ($session['schedule'] as $schedule) {
-    //             $upcoming[] = [
-    //                 'tutor' => $session['tutor_name'],
-    //                 'date' => $schedule['date'],
-    //                 'day' => $schedule['day'],
-    //                 'time' => $schedule['time'],
-    //                 'status' => $schedule['date'] >= $today ? 'upcoming' : 'past'
-    //             ];
-    //         }
-    //     }
-
-    //     $upcomingCollection = collect($upcoming)->sortByDesc('date');
-    //     $currentPage = LengthAwarePaginator::resolveCurrentPage();
-    //     $currentItems = $upcomingCollection->slice(($currentPage - 1) * $perPage, $perPage)->values();
-    //     $paginator = new LengthAwarePaginator(
-    //         $currentItems,
-    //         $upcomingCollection->count(),
-    //         $perPage,
-    //         $currentPage,
-    //         ['path' => LengthAwarePaginator::resolveCurrentPath()]
-    //     );
-
-    //     return response()->json([
-    //         'success' => true,
-    //         'sessions' => $paginator->items(),
-    //         'pagination' => [
-    //             'total' => $paginator->total(),
-    //             'per_page' => $paginator->perPage(),
-    //             'current_page' => $paginator->currentPage(),
-    //             'last_page' => $paginator->lastPage(),
-    //             'from' => $paginator->firstItem(),
-    //             'to' => $paginator->lastItem(),
-    //             'first_page_url' => $paginator->url(1),
-    //             'last_page_url' => $paginator->url($paginator->lastPage()),
-    //             'next_page_url' => $paginator->nextPageUrl(),
-    //             'prev_page_url' => $paginator->previousPageUrl(),
-    //             'path' => $paginator->resolveCurrentPath(),
-    //         ],
-    //     ]);
-    // }
-
+    //upcoming sessions
     public function upcomingSessions(Request $request)
     {
         $perPage = $request->per_page;
 
         $schedules = Schedule::whereHas('tutorBooking', function ($query) {
-            $query->where('student_id', auth()->id());
-        })->paginate($perPage ?? 10);
+            $query->where('student_id', auth()->id())
+                ->where('status', 'enrolled');
+        })->orderBy('start_time', 'desc')->paginate($perPage ?? 10);
 
         if ($schedules->isEmpty()) {
             return response()->json([
@@ -185,6 +122,5 @@ class DashboardController extends Controller
             'success' => true,
             'sessions' => $schedules
         ]);
-
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tutor;
 
 use App\Http\Controllers\Controller;
+use App\Models\Schedule;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\TutorBooking;
@@ -440,52 +441,36 @@ class TutorController extends Controller
     public function upcomingSessions(Request $request)
     {
         $perPage = $request->per_page;
-        $sessionss = Auth::user()->tutorInfo->tutorBookings()->with('student')->where('status', 'enrolled')->get();
-
-        if ($sessionss->isEmpty()) {
+        $tutor_id = Auth::user()->tutorInfo->id;
+        $schedules = Schedule::whereHas('tutorBooking', function ($query) use ($tutor_id) {
+            $query->where('tutor_id', $tutor_id)
+                ->where('status', 'enrolled');
+        })->orderBy('start_time', 'desc')->paginate($perPage ?? 10);
+        if ($schedules->isEmpty()) {
             return response()->json([
                 'success' => false,
-                'message' => 'No session found'
+                'message' => 'No upcoming session found',
             ]);
         }
 
-        $sessions = $sessionss->transform(function ($session) {
-            $schedules = collect(json_decode($session->schedule, true));
+        $schedules->getCollection()->transform(function ($schedule) {
             return [
-                'id' => $session->id,
-                'student_id' => $session->student_id,
-                'student_name' => $session->student->name,
-                'schedule' => $schedules,
-                'zoom_link' => $session->zoom_link,
+                'id' => $schedule->id,
+                'student_id' => $schedule->tutorBooking->student_id,
+                'student_name' => $schedule->tutorBooking->student->name,
+                'email' => $schedule->tutorBooking->student->email,
+                'date' => Carbon::parse($schedule->start_time)->format('M d, Y'),
+                'day' => Carbon::parse($schedule->start_time)->format('l'),
+                'time_slot' => Carbon::parse($schedule->start_time)->format('h:i A') . ' - ' . Carbon::parse($schedule->end_time)->format('h:i A'),
+                'type' => $schedule->type,
+                'status' => Carbon::parse($schedule->start_time)->isPast() ? 'past' : 'upcoming',
+                'zoom_link' => $schedule->zoom_link
             ];
         });
-        $today = Carbon::today()->toDateString();
-        $upcoming = [];
-        foreach ($sessions as $session) {
-            foreach ($session['schedule'] as $schedule) {
-                $upcoming[] = [
-                    'student' => $session['student_name'],
-                    'date' => $schedule['date'],
-                    'day' => $schedule['day'],
-                    'time' => $schedule['time'],
-                    'status' => $schedule['date'] >= $today ? 'upcoming' : 'past',
-                    'zoom_link' => $session['zoom_link'],
-                ];
-            }
-        }
 
-        $upcomingCollection = collect($upcoming)->sortByDesc('date');
-        $currentPage = LengthAwarePaginator::resolveCurrentPage();
-        $currentPageItems = $upcomingCollection->slice(($currentPage - 1) * $perPage, $perPage)->all();
-        $upcomingPaginated = new LengthAwarePaginator(
-            $currentPageItems,
-            count($upcomingCollection),
-            $perPage);
-        $upcomingPaginated->setPath($request->url());
         return response()->json([
             'success' => true,
-            'data' => $upcomingPaginated,
-            'session' => $upcoming,
+            'session' => $schedules,
         ]);
     }
 
@@ -503,28 +488,80 @@ class TutorController extends Controller
     //update tutor session link
     public function updateLink(Request $request)
     {
-        $date = $request->date;
+        $id = $request->id;
         $zoom_link = $request->zoom_link;
         $tutor_id = Auth::user()->tutorInfo->id;
-        $booking_schedule = TutorBooking::where('tutor_id', $tutor_id)
-            ->get();
 
-            // dd($booking_schedule);
-
-        $schedules = $booking_schedule->map(function ($schedule) use ($date, $zoom_link) {
-            $schedule = json_decode($schedule->schedule, true);
-            foreach ($schedule as $key => $value) {
-                if ($value['date'] == $date) {
-                    $schedule[$key]['zoom_link'] = $zoom_link;
-                }
-            }
-            return $schedule;
-        });
+        $schedule = Schedule::find($id);
+        if (!$schedule) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Session not found',
+            ]);
+        }
+        //check authourization
+        if ($schedule->tutorBooking->tutor_id != $tutor_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ]);
+        }
+        $schedule->zoom_link = $zoom_link;
+        $schedule->save();
 
         return response()->json([
             'success' => true,
-            'data' => $schedules,
+            'message' => 'Link updated successfully',
         ]);
+    }
 
+    //reschedule session
+    public function rescheduleSession(Request $request)
+    {
+        $id = $request->id;
+        $times = explode(' - ', $request->time);
+        $start_time = $request->date . ' ' . $times[0];
+        $end_time = $request->date . ' ' . $times[1];
+        $tutor_id = Auth::user()->tutorInfo->id;
+
+        $schedule = Schedule::find($id);
+        if (!$schedule) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Session not found',
+            ]);
+        }
+        //check authourization
+        if ($schedule->tutorBooking->tutor_id != $tutor_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ]);
+        }
+
+        //check if session is within 8hrs
+        $sessionTime = Carbon::parse($schedule->start_time);
+        $currentTime = Carbon::now();
+        $diff = $currentTime->diffInMinutes($sessionTime);
+        if ($diff < 8*60) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Session cannot be rescheduled within 8hrs',
+            ]);
+        }
+        $startTimestamp = Carbon::parse($start_time)->format('Y-m-d H:i:s');
+        $endTimestamp = Carbon::parse($end_time)->format('Y-m-d H:i:s');
+
+        $schedule->start_time = $startTimestamp;
+        $schedule->end_time = $endTimestamp;
+        $schedule->reschedule_at = now();
+        $schedule->status = 'reschedule';
+        $schedule->reschedule_by = 'tutor';
+        $schedule->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Session rescheduled successfully',
+        ]);
     }
 }
