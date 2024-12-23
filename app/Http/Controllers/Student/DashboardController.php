@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
+use App\Models\Schedule;
+use App\Models\TutorBooking;
+use App\Models\TutorReview;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -86,66 +89,102 @@ class DashboardController extends Controller
 
 
     //upcomming sessions
+    // public function upcomingSessions(Request $request)
+    // {
+    //     $perPage = $request->per_page;
+    //     $sessionss = auth()->user()->tutorBookings()->where('status', 'enrolled')->get();
+    //     if ($sessionss->isEmpty()) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'No session found'
+    //         ]);
+    //     }
+    //     $sessions = $sessionss->transform(function ($session) {
+    //         $schedules = collect(json_decode($session->schedule, true));
+    //         return [
+    //             'id' => $session->id,
+    //             'tutor_id' => $session->tutor_id,
+    //             'tutor_name' => $session->tutor->user->name,
+    //             'schedule' => $schedules,
+    //         ];
+    //     });
+    //     $today = Carbon::today()->toDateString();
+    //     $upcoming = [];
+    //     foreach ($sessions as $session) {
+    //         foreach ($session['schedule'] as $schedule) {
+    //             $upcoming[] = [
+    //                 'tutor' => $session['tutor_name'],
+    //                 'date' => $schedule['date'],
+    //                 'day' => $schedule['day'],
+    //                 'time' => $schedule['time'],
+    //                 'status' => $schedule['date'] >= $today ? 'upcoming' : 'past'
+    //             ];
+    //         }
+    //     }
+
+    //     $upcomingCollection = collect($upcoming)->sortByDesc('date');
+    //     $currentPage = LengthAwarePaginator::resolveCurrentPage();
+    //     $currentItems = $upcomingCollection->slice(($currentPage - 1) * $perPage, $perPage)->values();
+    //     $paginator = new LengthAwarePaginator(
+    //         $currentItems,
+    //         $upcomingCollection->count(),
+    //         $perPage,
+    //         $currentPage,
+    //         ['path' => LengthAwarePaginator::resolveCurrentPath()]
+    //     );
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'sessions' => $paginator->items(),
+    //         'pagination' => [
+    //             'total' => $paginator->total(),
+    //             'per_page' => $paginator->perPage(),
+    //             'current_page' => $paginator->currentPage(),
+    //             'last_page' => $paginator->lastPage(),
+    //             'from' => $paginator->firstItem(),
+    //             'to' => $paginator->lastItem(),
+    //             'first_page_url' => $paginator->url(1),
+    //             'last_page_url' => $paginator->url($paginator->lastPage()),
+    //             'next_page_url' => $paginator->nextPageUrl(),
+    //             'prev_page_url' => $paginator->previousPageUrl(),
+    //             'path' => $paginator->resolveCurrentPath(),
+    //         ],
+    //     ]);
+    // }
+
     public function upcomingSessions(Request $request)
     {
         $perPage = $request->per_page;
-        $sessionss = auth()->user()->tutorBookings()->where('status', 'enrolled')->get();
-        if ($sessionss->isEmpty()) {
+
+        $schedules = Schedule::whereHas('tutorBooking', function ($query) {
+            $query->where('student_id', auth()->id());
+        })->paginate($perPage ?? 10);
+
+        if ($schedules->isEmpty()) {
             return response()->json([
                 'success' => false,
                 'message' => 'No session found'
             ]);
         }
-        $sessions = $sessionss->transform(function ($session) {
-            $schedules = collect(json_decode($session->schedule, true));
+
+        $schedules->getCollection()->transform(function ($schedule) {
             return [
-                'id' => $session->id,
-                'tutor_id' => $session->tutor_id,
-                'tutor_name' => $session->tutor->user->name,
-                'schedule' => $schedules,
+                'id' => $schedule->id,
+                'tutor_id' => $schedule->tutorBooking->tutor_id,
+                'tutor_name' => $schedule->tutorBooking->tutor->user->name,
+                'date' => Carbon::parse($schedule->start_time)->format('M d, Y'),
+                'day' => Carbon::parse($schedule->start_time)->format('l'),
+                'time_slot' => Carbon::parse($schedule->start_time)->format('h:i A') . ' - ' . Carbon::parse($schedule->end_time)->format('h:i A'),
+                'type' => $schedule->type,
+                'status' => Carbon::parse($schedule->start_time)->isPast() ? 'past' : 'upcoming',
+                'zoom_link' => $schedule->zoom_link
             ];
         });
-        $today = Carbon::today()->toDateString();
-        $upcoming = [];
-        foreach ($sessions as $session) {
-            foreach ($session['schedule'] as $schedule) {
-                $upcoming[] = [
-                    'tutor' => $session['tutor_name'],
-                    'date' => $schedule['date'],
-                    'day' => $schedule['day'],
-                    'time' => $schedule['time'],
-                    'status' => $schedule['date'] >= $today ? 'upcoming' : 'past'
-                ];
-            }
-        }
-
-        $upcomingCollection = collect($upcoming)->sortByDesc('date');
-        $currentPage = LengthAwarePaginator::resolveCurrentPage();
-        $currentItems = $upcomingCollection->slice(($currentPage - 1) * $perPage, $perPage)->values();
-        $paginator = new LengthAwarePaginator(
-            $currentItems,
-            $upcomingCollection->count(),
-            $perPage,
-            $currentPage,
-            ['path' => LengthAwarePaginator::resolveCurrentPath()]
-        );
 
         return response()->json([
             'success' => true,
-            'sessions' => $paginator->items(),
-            'pagination' => [
-                'total' => $paginator->total(),
-                'per_page' => $paginator->perPage(),
-                'current_page' => $paginator->currentPage(),
-                'last_page' => $paginator->lastPage(),
-                'from' => $paginator->firstItem(),
-                'to' => $paginator->lastItem(),
-                'first_page_url' => $paginator->url(1),
-                'last_page_url' => $paginator->url($paginator->lastPage()),
-                'next_page_url' => $paginator->nextPageUrl(),
-                'prev_page_url' => $paginator->previousPageUrl(),
-                'path' => $paginator->resolveCurrentPath(),
-            ],
+            'sessions' => $schedules
         ]);
+
     }
 }
