@@ -120,7 +120,8 @@ class StudentController extends Controller
                 'schedule.*.date' => 'required|string',
                 'schedule.*.time' => 'required|string',
                 'type' => 'required|string',
-                'repeat' => 'nullable|string',
+                'repeat' => 'nullable|in:daily,weekly, bi-weekly,monthly',
+                'recurrence_end' => $request->repeat ? 'required|date' : 'nullable|date',
                 'session_cost' => 'required',
             ]);
 
@@ -132,6 +133,7 @@ class StudentController extends Controller
             $booking->tutor_id = $request->tutor_id;
             $booking->student_id = auth()->id();
             $booking->repeat = $request->repeat ?? null;
+            $booking->recurrence_end = $request->recurrence_end ?? null;
             $booking->session_quantity = $session_quantity;
             $booking->session_cost = $request->session_cost;
             $booking->total_cost = $total_cost;
@@ -139,21 +141,70 @@ class StudentController extends Controller
 
             $schedule = $request->input('schedule');
 
+            $allSchedules = [];
+
             foreach ($schedule as $value) {
                 $times = explode('-', $value['time']);
                 $startTime = $value['date'] . ' ' . $times[0];
                 $endTime = $value['date'] . ' ' . $times[1];
 
-                $startTimestamp = Carbon::parse($startTime)->format('Y-m-d H:i:s');
-                $endTimestamp = Carbon::parse($endTime)->format('Y-m-d H:i:s');
+                $startTimestamp = Carbon::parse($startTime);
+                $endTimestamp = Carbon::parse($endTime);
 
-            $schedules = new Schedule();
-            $schedules->tutor_booking_id = $booking->id;
-            $schedules->start_time = $startTimestamp;
-            $schedules->end_time = $endTimestamp;
-            $schedules->type = $request->type;
-            $schedules->save();
+
+                $allSchedules[] = [
+                    'tutor_booking_id' => $booking->id,
+                    'start_time' => $startTimestamp->format('Y-m-d H:i:s'),
+                    'end_time' => $endTimestamp->format('Y-m-d H:i:s'),
+                    'type' => $request->type,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+
+                $recurrenceEnd = $request->recurrence_end ? Carbon::parse($request->recurrence_end) : null;
+
+                while ($request->repeat && (!$recurrenceEnd || $startTimestamp->lte($recurrenceEnd))) {
+                    switch ($request->repeat) {
+                        case 'daily':
+                            $startTimestamp->addDay();
+                            $endTimestamp->addDay();
+                            break;
+                        case 'weekly':
+                            $startTimestamp->addWeek();
+                            $endTimestamp->addWeek();
+                            break;
+                        case 'bi-weekly':
+                            $startTimestamp->addWeeks(2);
+                            $endTimestamp->addWeeks(2);
+                            break;
+                        case 'monthly':
+                            $startTimestamp->addMonth();
+                            $endTimestamp->addMonth();
+                            break;
+                    }
+
+                    if ($recurrenceEnd && $startTimestamp->gt($recurrenceEnd)) {
+                        break;
+                    }
+
+                    $allSchedules[] = [
+                        'tutor_booking_id' => $booking->id,
+                        'start_time' => $startTimestamp->format('Y-m-d H:i:s'),
+                        'end_time' => $endTimestamp->format('Y-m-d H:i:s'),
+                        'type' => $request->type,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
             }
+            $session_quantity = count($allSchedules);
+            $total_cost = $request->session_cost * $session_quantity;
+            $booking->session_quantity = $session_quantity;
+            $booking->total_cost = $total_cost;
+            $booking->save();
+            Schedule::insert($allSchedules);
+
+
 
             //transaction logic here
             $paystact = new PaystackService();
@@ -165,11 +216,31 @@ class StudentController extends Controller
                 'metadata' => json_encode([
                     'booking_id' => $booking->id,
                     'student_id' => auth()->id(),
+                    'student_name' => auth()->user()->name,
+                    'student_email' => auth()->user()->email,
+                    'tutor_name' => $booking->tutor->user->name,
+                    'tutor_email' => $booking->tutor->user->email,
+                    'start_date' => $schedule[0]['date'],
                     'booking_type' => 'tutor',
                     'booking_time' => now()
                 ]),
                 'callback_url' => route('tutor.booking.callback')
             ]);
+
+            //mail data
+            $data = [
+                'email' => auth()->user()->email,
+                'name' => auth()->user()->name,
+                'title' => 'Booking Confirmation',
+                'content' => 'please click the link below to confirm your booking by making payment' . " <a href='{{$response->data->authorization_url}}'>Click here</a>.",
+                'booking_id' => $booking->id,
+                'total_cost' => $total_cost,
+                'session_quantity' => $session_quantity,
+                'start_date' => $schedule[0]['date'],
+                'booking_time' => now(),
+            ];
+            //send mail
+            scheduleMail($data);
 
             if ($response->status === false) {
                 throw new \Exception($response->message);
@@ -242,13 +313,24 @@ class StudentController extends Controller
     public function bookingCallback(Request $request)
     {
         DB::beginTransaction();
+
         try {
+
+            if (Escrow::where('reference_id', $request->reference)->exists()) {
+                throw new \Exception('Transaction already processed');
+            }
+
             $paystact = new PaystackService();
             $response = $paystact->verifyTransaction($request->reference);
 
             if ($response->status === false) {
                 throw new \Exception($response->message);
             }
+
+            if ($response->data->status !== 'success') {
+                throw new \Exception('Transaction not successful');
+            }
+
 
             $booking = TutorBooking::find($response->data->metadata->booking_id);
             $booking->status = 'enrolled';
@@ -262,6 +344,37 @@ class StudentController extends Controller
             $escrow->status = 'hold';
             $escrow->reference_id = $response->data->reference;
             $escrow->save();
+
+            //mail data
+            $data = [
+                'email' => $response->data->metadata->student_email,
+                'name' => $response->data->metadata->student_name,
+                'title' => 'Booking Confirmation',
+                'content' => 'Your booking has been confirmed successfully',
+                'booking_id' => $booking->id,
+                'total_cost' => $booking->total_cost,
+                'session_quantity' => $booking->session_quantity,
+                'start_date' => $response->data->metadata->start_date,
+                'booking_time' => $booking->created_at,
+            ];
+
+            //send mail
+            scheduleMail($data);
+
+            //send mail to tutor
+            $data = [
+                'email' => $response->data->metadata->tutor_email,
+                'name' => $response->data->metadata->tutor_name,
+                'title' => 'Booking Confirmation',
+                'content' => 'You have a new booking request',
+                'booking_id' => $booking->id,
+                'total_cost' => $booking->total_cost,
+                'session_quantity' => $booking->session_quantity,
+                'start_date' => $response->data->metadata->start_date,
+                'booking_time' => $booking->created_at,
+            ];
+            // send mail
+            scheduleMail($data);
 
             DB::commit();
 

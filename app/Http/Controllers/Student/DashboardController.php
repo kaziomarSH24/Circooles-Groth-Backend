@@ -123,4 +123,7 @@ class DashboardController extends Controller
             'sessions' => $schedules
         ]);
     }
+
+    //reschedule session
+   
 }

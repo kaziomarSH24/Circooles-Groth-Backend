@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tutor;
 
 use App\Http\Controllers\Controller;
+use App\Models\Escrow;
 use App\Models\Schedule;
 use App\Models\Subject;
 use App\Models\Transaction;
@@ -518,50 +519,98 @@ class TutorController extends Controller
     //reschedule session
     public function rescheduleSession(Request $request)
     {
-        $id = $request->id;
-        $times = explode(' - ', $request->time);
-        $start_time = $request->date . ' ' . $times[0];
-        $end_time = $request->date . ' ' . $times[1];
-        $tutor_id = Auth::user()->tutorInfo->id;
+        DB::beginTransaction();
+        try {
+            $id = $request->schedul_id;
+            $times = explode(' - ', $request->time);
+            $start_time = $request->date . ' ' . $times[0];
+            $end_time = $request->date . ' ' . $times[1];
+            $tutor_id = Auth::user()->tutorInfo->id;
 
-        $schedule = Schedule::find($id);
-        if (!$schedule) {
+            $schedule = Schedule::find($id);
+            if (!$schedule) {
+                throw new \Exception('Session not found');
+            }
+            //check authourization
+            if ($schedule->tutorBooking->tutor_id != $tutor_id) {
+                throw new \Exception('Unauthorized');
+            }
+
+
+            //check if session is within 8hrs
+            $sessionTime = Carbon::parse($schedule->start_time);
+            $currentTime = Carbon::now();
+            $diff = $currentTime->diffInMinutes($sessionTime);
+
+            if ($diff < 8 * 60) {
+                throw new \Exception('Session cannot be rescheduled within 8hrs');
+            }
+
+            //5% penalty charge for rescheduling
+            $penalty = $schedule->tutorBooking->session_cost * 0.05;
+
+            //update wallet
+            $wallet = Wallets::whereHas('user', function ($query) {
+                $query->where('role', 'admin');
+            })->first();
+            $wallet->balance += $penalty;
+            $wallet->save();
+
+            //update transaction
+            $escrow = Escrow::where('booking_id', $schedule->tutor_booking_id)
+                            ->first();
+            $escrow->hold_amount -= $penalty;
+            $escrow->save();
+
+            $startTimestamp = Carbon::parse($start_time)->format('Y-m-d H:i:s');
+            $endTimestamp = Carbon::parse($end_time)->format('Y-m-d H:i:s');
+
+            $schedule->start_time = $startTimestamp;
+            $schedule->end_time = $endTimestamp;
+            $schedule->reschedule_at = now();
+            $schedule->status = 'reschedule';
+            $schedule->reschedule_by = 'tutor';
+            $schedule->save();
+
+            $data = [
+                'email' => $schedule->tutorBooking->student->email,
+                'name' => $schedule->tutorBooking->student->name,
+                'title' => 'Session Rescheduled',
+                'content' => 'Your session has been rescheduled successfully by tutor ' . Auth::user()->name,
+                'booking_id' => $schedule->tutor_booking_id,
+                'total_cost' => $schedule->tutorBooking->session_cost,
+                'session_quantity' => 1,
+                'start_date' => $startTimestamp,
+                'booking_time' => $schedule->created_at->format('Y-m-d H:i:s'),
+            ];
+            //send email
+           scheduleMail($data);
+           $data = [
+            'email' => Auth::user()->email,
+            'name' => Auth::user()->name,
+            'title' => 'Session Rescheduled',
+            'content' => 'Your session has been rescheduled successfully. You have been charged a penalty of $' . $penalty,
+            'booking_id' => $schedule->tutor_booking_id,
+            'total_cost' => $schedule->tutorBooking->session_cost,
+            'session_quantity' => 1,
+            'start_date' => $startTimestamp,
+            'booking_time' => $schedule->created_at->format('Y-m-d H:i:s'),
+           ];
+
+            //send email
+            scheduleMail($data);
+
+            DB::commit();
+            return response()->json([
+                'success' => true,
+                'message' => 'Session rescheduled successfully',
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Session not found',
+                'message' => $e->getMessage(),
             ]);
         }
-        //check authourization
-        if ($schedule->tutorBooking->tutor_id != $tutor_id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized',
-            ]);
-        }
-
-        //check if session is within 8hrs
-        $sessionTime = Carbon::parse($schedule->start_time);
-        $currentTime = Carbon::now();
-        $diff = $currentTime->diffInMinutes($sessionTime);
-        if ($diff < 8*60) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Session cannot be rescheduled within 8hrs',
-            ]);
-        }
-        $startTimestamp = Carbon::parse($start_time)->format('Y-m-d H:i:s');
-        $endTimestamp = Carbon::parse($end_time)->format('Y-m-d H:i:s');
-
-        $schedule->start_time = $startTimestamp;
-        $schedule->end_time = $endTimestamp;
-        $schedule->reschedule_at = now();
-        $schedule->status = 'reschedule';
-        $schedule->reschedule_by = 'tutor';
-        $schedule->save();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Session rescheduled successfully',
-        ]);
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Mail\ScheduleMail;
 use App\Mail\sendOtp;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
@@ -21,6 +22,15 @@ if (!function_exists('sendOtp')) {
         ];
         Mail::to($data['email'])->send(new sendOtp($data));
         return $data;
+    }
+}
+
+//Session Schedule Mail
+if (!function_exists('scheduleMail')) {
+    function scheduleMail($data)
+    {
+        Mail::to($data['email'])->send(new ScheduleMail($data));
+
     }
 }
 
