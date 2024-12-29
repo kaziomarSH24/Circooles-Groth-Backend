@@ -34,6 +34,10 @@ class TutorInfo extends Model
     {
         return $this->belongsTo(User::class);
     }
+    public function tutor()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
     public function tutorVerification()
     {
         return $this->hasOne(TutorVerification::class, 'tutor_id');

@@ -11,9 +11,15 @@ use App\Http\Controllers\Student\DashboardController;
 use App\Http\Controllers\Student\StudentController;
 use App\Http\Controllers\Tutor\TutorAccountDetails;
 use App\Http\Controllers\Tutor\TutorController;
+use App\Jobs\SendSessionReminder;
+use App\Models\Schedule;
 use App\Services\PaystackService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
+use PgSql\Lob;
 use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
 
 //Home Controller
@@ -203,4 +209,35 @@ Route::get('/payment/verify', function (Request $request) {
 Route::prefix('transfer')->controller(PaystackTransferController::class)->group(function () {
     Route::post('/test', 'transfer');
     Route::post('/transferToTutor', 'transferToTutor');
+});
+
+//test route
+Route::get('/test', function () {
+    $sessions = Schedule::where('is_started', false)
+    ->where('start_time', '>', now())
+    ->where('start_time', '<', now()->addHours(24))
+    ->get();
+
+    $sessions->transform(function ($session) {
+        return [
+            'id' => $session->id,
+            'tutor_name' => $session->tutorBooking->tutorInfo->tutor->name,
+            'tutor_email' => $session->tutorBooking->tutorInfo->tutor->email,
+            'student_name' => $session->tutorBooking->student->name,
+            'student_email' => $session->tutorBooking->student->email,
+            'start_time' => $session->start_time,
+            'duration' => Carbon::parse($session->start_time)->diffInHours(Carbon::parse($session->end_time)) . ' hours',
+            'type' => $session->type,
+            'zoom_link' => $session->zoom_link,
+        ];
+    });
+
+    foreach($sessions as $session) {
+        $minutesDiff = Carbon::parse($session['start_time'])->diff(now());
+        dd($minutesDiff);
+      dd( Carbon::parse($session['start_time'])->diffInMinutes(now()));
+
+}
+
+
 });

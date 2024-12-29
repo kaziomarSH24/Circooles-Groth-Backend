@@ -12,13 +12,15 @@ use Illuminate\Queue\SerializesModels;
 class SessionReminder extends Mailable
 {
     use Queueable, SerializesModels;
-
+    public $session;
+    public $recipientType;
     /**
      * Create a new message instance.
      */
-    public function __construct()
+    public function __construct($session, $recipientType)
     {
-        //
+        $this->session = $session;
+        $this->recipientType = $recipientType;
     }
 
     /**
@@ -49,5 +51,18 @@ class SessionReminder extends Mailable
     public function attachments(): array
     {
         return [];
+    }
+
+    /**
+     * Build the message.
+     */
+    public function build()
+    {
+        return $this->markdown('emails.session_reminder')
+        ->subject('Upcoming Session Reminder')
+        ->with([
+            'session' => $this->session,
+            'recipientType' => $this->recipientType,
+        ]);
     }
 }
