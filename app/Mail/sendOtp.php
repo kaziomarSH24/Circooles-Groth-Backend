@@ -37,7 +37,7 @@ class sendOtp extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'verify-email',
+            markdown: 'emails.otp',
         );
     }
 
@@ -49,5 +49,16 @@ class sendOtp extends Mailable
     public function attachments(): array
     {
         return [];
+    }
+
+    /**
+     * Build the message.
+     */
+    public function build(){
+        return $this->markdown('emails.otp')
+            ->with([
+                'otp' => $this->data['otp'],
+                'otp_expiry_time' => $this->data['otp_expiry_time'],
+            ]);
     }
 }
