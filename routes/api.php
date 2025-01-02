@@ -69,7 +69,7 @@ Route::group(['prefix' => 'tutor', 'middleware' => ['jwt.auth', 'tutor']], funct
         Route::put('/update-profile', 'updateTutorProfile');
         Route::get('/upcoming-session', 'upcomingSessions');
         Route::put('/update-link', 'updateLink');
-        Route::get('/reschedule-session', 'rescheduleSession');
+        Route::get('/reschedule-session/{schedule_id}', 'rescheduleSession');
         Route::post('/verify-tutor-info', 'verifyTutorInfo');
         Route::get('/verify-tutor-info', 'getTutorVerificationInfo');
 

@@ -517,11 +517,24 @@ class TutorController extends Controller
     }
 
     //reschedule session
-    public function rescheduleSession(Request $request)
+    public function rescheduleSession(Request $request, $schedule_id)
     {
         DB::beginTransaction();
         try {
-            $id = $request->schedul_id;
+
+            $validator = Validator::make($request->all(), [
+                'date' => 'required|date',
+                'time' => 'required|string',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors(),
+                ]);
+            }
+
+            $id = $schedule_id;
             $times = explode(' - ', $request->time);
             $start_time = $request->date . ' ' . $times[0];
             $end_time = $request->date . ' ' . $times[1];
@@ -531,6 +544,11 @@ class TutorController extends Controller
             if (!$schedule) {
                 throw new \Exception('Session not found');
             }
+            //check session status already rescheduled or not
+            if ($schedule->status == 'reschedule') {
+                throw new \Exception('Session already rescheduled, you cannot reschedule again');
+            }
+
             //check authourization
             if ($schedule->tutorBooking->tutor_id != $tutor_id) {
                 throw new \Exception('Unauthorized');
@@ -549,18 +567,31 @@ class TutorController extends Controller
             //5% penalty charge for rescheduling
             $penalty = $schedule->tutorBooking->session_cost * 0.05;
 
-            //update wallet
-            $wallet = Wallets::whereHas('user', function ($query) {
-                $query->where('role', 'admin');
-            })->first();
-            $wallet->balance += $penalty;
-            $wallet->save();
+            // //update wallet
+            // $wallet = Wallets::whereHas('user', function ($query) {
+            //     $query->where('role', 'admin');
+            // })->first();
+            // $wallet->balance += $penalty;
+            // $wallet->save();
 
             //update transaction
             $escrow = Escrow::where('booking_id', $schedule->tutor_booking_id)
                             ->first();
-            $escrow->hold_amount -= $penalty;
+            $escrow->deducted_amount += $penalty;
             $escrow->save();
+
+            //checking reason json field
+            $reason = $schedule->reason ? json_decode($schedule->reason) : [];
+            $reason[] = [
+                'type' => 'reschedule',
+                'detials' =>[
+                    'reschedule_by' => 'tutor',
+                    'reschedule_at' => now(),
+                    'previous_date' => $schedule->start_time,
+                    'penalty' => $penalty,
+                    'reason' => 'Rescheduled by tutor',
+            ]
+            ];
 
             $startTimestamp = Carbon::parse($start_time)->format('Y-m-d H:i:s');
             $endTimestamp = Carbon::parse($end_time)->format('Y-m-d H:i:s');
@@ -569,6 +600,7 @@ class TutorController extends Controller
             $schedule->end_time = $endTimestamp;
             $schedule->reschedule_at = now();
             $schedule->status = 'reschedule';
+            $schedule->reason = json_encode($reason);
             $schedule->reschedule_by = 'tutor';
             $schedule->save();
 

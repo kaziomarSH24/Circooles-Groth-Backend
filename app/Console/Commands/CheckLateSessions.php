@@ -62,9 +62,36 @@ class CheckLateSessions extends Command
 
         foreach ($sessions as $session) {
             $lateness = now()->diffInMinutes(Carbon::parse($session['start_time']), true);
+
             if ($lateness > 11 && $lateness < 15) {
                 //calculate penalty for late session
                 $penalty = $session['session_cost'] * 0.10;
+
+
+                 //check if reason type already lateness or not
+                 $hasLateness = Schedule::whereJsonContains('reason', ['type' => 'lateness'])->find($session['id']);
+                 if ($hasLateness) {
+                    Log::info('Session is already marked as late');
+                     continue;
+                 }
+                 //update schedule reason
+                 $schedule = Schedule::find($session['id']);
+                 //check if reason json column is empty
+                 $reason = $schedule->reason ? json_decode($schedule->reason, true) : [];
+                 $newReason = [
+                     'type' => 'lateness',
+                     'details' => [
+                         'reason' => 'Session is late by ' . (int)$lateness . ' minutes',
+                         'penalty' => $penalty,
+                         'penalty_at' => now()
+                     ]
+                 ];
+                 $reason[] = $newReason;
+                 $schedule->reason = json_encode($reason);
+                 $schedule->save();
+
+
+
                 $escrow = Escrow::where('booking_id', $session['tutor_booking_id'])->first();
 
                 $paystack = new PaystackService();
@@ -82,13 +109,15 @@ class CheckLateSessions extends Command
                 $response = $paystack->refund($data);
 
                 if ($response->status == false) {
-                    Log::error($response->message);
+                    Log::error("paystack_error: ".$response->message);
                     continue;
                 }
-                $escrow->hold_amount -= $penalty;
+                $escrow->deducted_amount += $penalty;
                 $escrow->save();
+
                 sendLateSessionMail::dispatch($session, $penalty);
-                DB::commit();
+                Log::info('Session is late by 11 minutes');
+
             } elseif ($lateness >= 15) {
                 $refund = $session['session_cost'] - $session['session_cost'] * 0.10;
                 $escrow = Escrow::where('booking_id', $session['tutor_booking_id'])->first();
@@ -109,20 +138,37 @@ class CheckLateSessions extends Command
                     Log::error($response->message . ' ' . $escrow->reference_id);
                     continue;
                 }
-                $escrow->hold_amount -= $refund;
+                $escrow->deducted_amount += $refund;
                 $escrow->status = 'refunded';
                 $escrow->refund_date = now();
                 $escrow->save();
                 //update schedule status
                 $schedule = Schedule::find($session['id']);
+                //check if reason json column is empty
+                $reason = $schedule->reason ? json_decode($schedule->reason, true) : [];
+                $newReason = [
+                    'type' => 'cancelled',
+                    'details' => [
+                        'cancelled_by' => 'system',
+                        'cancelled_by' => now(),
+                        'reason' => 'Session is cancelled due to lateness by ' . $lateness . ' minutes',
+                        'comment' => 'Schedule full amount has been refunded to student for late session',
+                        'refund' => $refund,
+                        'refund_at' => now()
+                    ]
+                ];
+
+                $reason[] = $newReason;
+
                 $schedule->status = 'cancel';
+                $schedule->reason = json_encode($reason);
                 $schedule->save();
-                DB::commit();
                 sendLateSessionMail::dispatch($session, $refund);
                Log::info('Session is late by 15 minutes');
             }
         }
 
+        DB::commit();
         Log::info('Command executed');
         } catch (\Exception $e) {
             DB::rollBack();
