@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withSchedule(function (Schedule $schedule) {
         $schedule->command('app:notify-before-session')->everyMinute();
         $schedule->command('app:check-late-sessions')->everyMinute();
+        $schedule->command('app:check-complete-session')->everyMinute();
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

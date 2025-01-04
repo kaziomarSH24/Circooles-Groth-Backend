@@ -9,7 +9,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class sendOtp extends Mailable implements ShouldQueue
+class CompleteSessionMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
     public $data;
@@ -27,7 +27,7 @@ class sendOtp extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: $this->data['title'],
+            subject: 'Session has been completed',
         );
     }
 
@@ -37,7 +37,7 @@ class sendOtp extends Mailable implements ShouldQueue
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.otp',
+            markdown: 'emails.complete-session',
         );
     }
 
@@ -49,16 +49,5 @@ class sendOtp extends Mailable implements ShouldQueue
     public function attachments(): array
     {
         return [];
-    }
-
-    /**
-     * Build the message.
-     */
-    public function build(){
-        return $this->markdown('emails.otp')
-            ->with([
-                'otp' => $this->data['otp'],
-                'otp_expiry_time' => $this->data['otp_expiry_time'],
-            ]);
     }
 }

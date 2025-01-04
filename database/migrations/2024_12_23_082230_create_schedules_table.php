@@ -17,7 +17,7 @@ return new class extends Migration
             $table->timestamp('start_time')->nullable();
             $table->timestamp('end_time')->nullable();
             $table->enum('type', ['online', 'offline'])->default('online');
-            $table->enum('status', ['pending', 'cancel', 'success', 'reschedule'])->default('pending');
+            $table->enum('status', ['pending', 'cancel', 'success', 'reschedule', 'completed'])->default('pending');
             $table->timestamp('reschedule_at')->nullable();
             $table->enum('reschedule_by', ['tutor', 'student'])->nullable();
             $table->string('zoom_link')->nullable();

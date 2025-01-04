@@ -120,7 +120,7 @@ class StudentController extends Controller
                 'schedule.*.date' => 'required|string',
                 'schedule.*.time' => 'required|string',
                 'type' => 'required|string',
-                'repeat' => 'nullable|in:daily,weekly, bi-weekly,monthly',
+                'repeat' => 'nullable|in:daily,weekly,bi-weekly,monthly',
                 'recurrence_end' => $request->repeat ? 'required|date' : 'nullable|date',
                 'session_cost' => 'required',
             ]);

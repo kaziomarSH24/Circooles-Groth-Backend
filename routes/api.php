@@ -8,6 +8,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Student\CourseBookingController;
 use App\Http\Controllers\Student\DashboardController;
+use App\Http\Controllers\Tutor\DashboardController as TutorDashboardController;
 use App\Http\Controllers\Student\StudentController;
 use App\Http\Controllers\Tutor\TutorAccountDetails;
 use App\Http\Controllers\Tutor\TutorController;
@@ -87,6 +88,15 @@ Route::group(['prefix' => 'tutor', 'middleware' => ['jwt.auth', 'tutor']], funct
         Route::get('/fetch/recipient', 'fetchRecipient');
         Route::put('/update/recipient', 'updateRecipient');
         Route::delete('/delete/recipient', 'deleteRecipient');
+    });
+
+    //tutor Dashboard
+    Route::controller(TutorDashboardController::class)->group(function () {
+        Route::get('/enrolled-courses', 'enrolledCourses');
+        Route::get('/completed-courses', 'completedCourses');
+        Route::get('/total-students', 'totalStudents');
+        Route::get('/total-earnings', 'totalEarnings');
+        Route::get('/chart', 'totalEarningsMonthly');
     });
 });
 
