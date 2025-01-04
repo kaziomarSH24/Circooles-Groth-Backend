@@ -97,7 +97,9 @@ Route::group(['prefix' => 'tutor', 'middleware' => ['jwt.auth', 'tutor']], funct
         Route::get('/completed-courses', 'completedCourses');
         Route::get('/total-students', 'totalStudents');
         Route::get('/total-earnings', 'totalEarnings');
-        Route::get('/chart', 'totalEarningsMonthly');
+        Route::get('/total-earning-graph', 'totalEarningsGraph');
+        Route::get('/total-review-graph', 'totalReviewsGraph');
+        Route::get('/review-summary', 'reviewSummary');
     });
 });
 
