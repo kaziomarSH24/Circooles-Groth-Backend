@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Mail\CompleteSessionMail;
 use App\Models\Escrow;
 use App\Models\Schedule;
+use App\Models\Transaction;
 use App\Models\TutorInfo;
 use App\Models\User;
 use App\Models\Wallets;
@@ -99,37 +100,46 @@ class CheckCompleteSession extends Command
                 Log::info('Transferable amount: ' . $transferAbleAmount);
                 Log::info('Tutor user id: ' . $tutorUserID);
 
-                $tutorWallet = Wallets::updateOrCreate(
-                    ['user_id' => $tutorUserID],
-                    ['balance' => 0]
-                );
 
                 if ($transferAbleAmount > 0) {
+                    $tutorWallet = Wallets::updateOrCreate(
+                        ['user_id' => $tutorUserID],
+                        ['balance' => 0]
+                    );
                     $tutorWallet->balance += $transferAbleAmount;
+                    // Save the updated wallet balance
+                    $tutorWallet->save();
                 }
-                // Save the updated wallet balance
-                $tutorWallet->save();
 
-                //update admin wallet
-                $adminId = User::where('role', 'admin')->first()->id;
-                $adminWallet = Wallets::updateOrCreate(
-                    ['user_id' => $adminId],
-                    ['balance' => 0]
-                );
+
+
 
                 if ($adminCommission > 0) {
+                    //update admin wallet
+                    $adminId = User::where('role', 'admin')->first()->id;
+                    $adminWallet = Wallets::updateOrCreate(
+                        ['user_id' => $adminId],
+                        ['balance' => 0]
+                    );
                     $adminWallet->balance += $adminCommission;
+                    // Save the updated wallet balance
+                    $adminWallet->save();
+
+                    //transaction history
+                    $transaction = new Transaction();
+                    $transaction->seller_id = $adminId;
+                    $transaction->buyer_id = $tutorUserID;
+                    $transaction->amount = $adminCommission;
+                    $transaction->type = 'tutor_commission';
+                    $transaction->save();
                 }
-                // Save the updated wallet balance
-                $adminWallet->save();
 
-                // Save the updated wallet balance
-                $tutorWallet->save();
 
-                    //update escrow
-                    $escrow->status = 'released';
-                    $escrow->release_date = now();
-                    $escrow->save();
+
+                //update escrow
+                $escrow->status = 'released';
+                $escrow->release_date = now();
+                $escrow->save();
 
 
 
