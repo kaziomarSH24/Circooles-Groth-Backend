@@ -10,6 +10,7 @@ use App\Http\Controllers\Student\CourseBookingController;
 use App\Http\Controllers\Student\DashboardController;
 use App\Http\Controllers\Student\ReviewController;
 use App\Http\Controllers\Tutor\DashboardController as TutorDashboardController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Student\StudentController;
 use App\Http\Controllers\Tutor\TutorAccountDetails;
 use App\Http\Controllers\Tutor\TutorController;
@@ -110,6 +111,12 @@ Route::group(['prefix' => 'tutor', 'middleware' => ['jwt.auth', 'tutor']], funct
 
 // Admin Routes
 Route::group(['prefix' => 'admin', 'middleware' => ['jwt.auth', 'admin']], function () {
+
+    //admin dashboard
+    Route::controller(AdminDashboardController::class)->group(function () {
+        Route::get('/dashboard', 'adminDashboard');
+        Route::get('/total-earning-graph', 'totalEarningsGraph');
+    });
 
     //admin controller
     Route::controller(AdminController::class)->group(function () {
