@@ -8,6 +8,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Student\CourseBookingController;
 use App\Http\Controllers\Student\DashboardController;
+use App\Http\Controllers\Student\ReviewController;
 use App\Http\Controllers\Tutor\DashboardController as TutorDashboardController;
 use App\Http\Controllers\Student\StudentController;
 use App\Http\Controllers\Tutor\TutorAccountDetails;
@@ -204,6 +205,16 @@ Route::group(['prefix' => 'student', 'middleware' => 'jwt.auth'], function () {
         Route::get('enrolled-courses', 'enrolledCourses');
         Route::get('my-tutor', 'myTutor');
         Route::get('upcoming-session', 'upcomingSessions');
+    });
+
+    //review routes
+    Route::controller(ReviewController::class)->group(function () {
+        Route::post('/give-tutor-review/{tutor_id}', 'giveTutorReview');
+        Route::delete('/delete-tutor-review/{review_id}', 'deleteTutorReview');
+
+        //course review
+        Route::post('/give-course-review/{course_id}', 'giveCourseReview');
+        Route::delete('/delete-course-review/{review_id}', 'deleteCourseReview');
     });
 });
 
