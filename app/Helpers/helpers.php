@@ -2,6 +2,7 @@
 
 use App\Mail\ScheduleMail;
 use App\Mail\sendOtp;
+use App\Models\Course;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
 
@@ -74,5 +75,34 @@ if(!function_exists('referenceId')){
         return 'circooles_' .uniqid();
     }
 }
+/**
+ * Total indeviual course lectures count
+ */
 
-//file upload
+ if(!function_exists('totalLecturesCount')){
+     function totalCourseLecturesCount($course_id)
+     {
+         $course = Course::find($course_id);
+
+         $lectures = $course->curriculum->map(function ($curriculum) {
+             return $curriculum->lectures->count();
+         });
+         return $lectures->sum();
+     }
+ }
+
+ /**
+  * Get course lectures ids
+  */
+    if(!function_exists('courseLecturesIds')){
+        function courseLecturesIds($course_id)
+        {
+            $course = Course::find($course_id);
+
+            $lectureIds = $course->curriculum->flatMap(function ($curriculum) {
+                return $curriculum->lectures->pluck('id');
+            });
+
+            return $lectureIds;
+        }
+    }

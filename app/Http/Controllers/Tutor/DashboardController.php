@@ -14,11 +14,7 @@ use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    // This function is used to display the tutor dashboard
-    //count Enrolled Courses and Completed Courses api
-
-
-
+    //tutor dashboard stats
     public function tutorDashboardStats(Request $request)
     {
         try {
@@ -82,6 +78,7 @@ class DashboardController extends Controller
                 'success' => true,
                 'filter' => $filter,
                 'data' => [
+                    'totalEnrolledCourses' => $totalEnrolled,
                     'totalCompletedCourses' => $totalCompleted,
                     'totalStudents' => $totalStudents,
                     'totalEarnings' => $totalEarnings,

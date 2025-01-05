@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
+use App\Models\Course;
+use App\Models\CourseProgress;
+use App\Models\Lecture;
 use App\Models\Schedule;
 use App\Models\TutorBooking;
 use App\Models\TutorReview;
@@ -124,6 +127,68 @@ class DashboardController extends Controller
         ]);
     }
 
-    //reschedule session
-   
+    //count course lectures
+    public function markedLectureCompleted($lecture_id)
+    {
+        //find course id by lecture id
+        try {
+            $courseId = Lecture::find($lecture_id)->curriculum->course_id;
+            $courseProgress = CourseProgress::where('user_id', auth()->id())
+                ->where('course_id', $courseId)
+                ->first();
+
+            if ($courseProgress) {
+                $completedIds = $courseProgress->completed_lectures ? json_decode($courseProgress->completed_lectures, true) : [];
+                $totalLectures = $courseProgress->total_lectures;
+
+                if (!in_array($lecture_id, $completedIds) ) {
+                    $completedIds[] = $lecture_id;
+                    //count total ids
+                    $completedLectures = count($completedIds);
+                    $courseProgress->completed_lectures = json_encode($completedIds);
+                    $courseProgress->progress = round(($completedLectures / $totalLectures) * 100, 2);
+                    $courseProgress->save();
+                }
+            }
+            return response()->json([
+                'success' => true,
+                'message' => 'Lecture marked as completed'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    //show course progress
+    public function courseProgresses(Request $request)
+    {
+        $perPage = $request->per_page;
+        $courseProgresses = CourseProgress::where('user_id', auth()->id())->paginate($perPage ?? 10);
+        if ($courseProgresses->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No course progress found'
+            ]);
+        }
+        $courseProgresses->getCollection()->transform(function ($courseProgress) {
+            $completedLectures = $courseProgress->completed_lectures ? json_decode($courseProgress->completed_lectures, true) : [];
+            return [
+                'id' => $courseProgress->id,
+                'course_id' => $courseProgress->course_id,
+                'course_title' => $courseProgress->course->title,
+                'course_slug' => $courseProgress->course->slug,
+                'total_lectures' => $courseProgress->total_lectures,
+                'completed_lectures' => count($completedLectures),
+                'progress' => $courseProgress->progress,
+            ];
+        });
+        return response()->json([
+            'success' => true,
+            'course_progresses' => $courseProgresses
+        ]);
+    }
+
 }

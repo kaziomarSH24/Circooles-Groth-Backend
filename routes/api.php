@@ -178,7 +178,9 @@ Route::group(['prefix' => 'admin', 'middleware' => ['jwt.auth', 'admin']], funct
 });
 
 
-// Student Controller
+/**
+ * Student routes
+ */
 Route::group(['prefix' => 'student', 'middleware' => 'jwt.auth'], function () {
     Route::controller(StudentController::class)->group(function () {
         Route::get('/all-tutors', 'allTutors');
@@ -210,6 +212,10 @@ Route::group(['prefix' => 'student', 'middleware' => 'jwt.auth'], function () {
         Route::get('enrolled-courses', 'enrolledCourses');
         Route::get('my-tutor', 'myTutor');
         Route::get('upcoming-session', 'upcomingSessions');
+
+        //course progress
+        Route::get('mark-lecture-completed/{lecture_id}', 'markedLectureCompleted');
+        Route::get('course-progress/', 'courseProgresses');
     });
 
     //review routes

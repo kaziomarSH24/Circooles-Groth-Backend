@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Models\CourseProgress;
 use App\Models\Curriculum;
 use App\Models\Lecture;
 use App\Services\PaystackService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Validator;
@@ -34,9 +36,9 @@ class CourseController extends Controller
                 return $query->where('category_id', $category);
             })
             ->when($rating, function ($query, $rating) {
-               return $query->whereHas('reviews', function ($q) use ($rating) {
-                  $q->havingRaw('AVG(rating) >= ?', [$rating]);
-               });
+                return $query->whereHas('reviews', function ($q) use ($rating) {
+                    $q->havingRaw('AVG(rating) >= ?', [$rating]);
+                });
             })
             ->orderBy('created_at', $sortBy)
             ->paginate($request->per_page ?? 10);
@@ -167,7 +169,7 @@ class CourseController extends Controller
     //show course
     public function showCourse($id)
     {
-        $course = Course::with('category', 'subCategory','reviews','curriculum.lectures')->find($id);
+        $course = Course::with('category', 'subCategory', 'reviews', 'curriculum.lectures')->find($id);
         if (!$course) {
             return response()->json([
                 'success' => false,
@@ -202,7 +204,8 @@ class CourseController extends Controller
             'created_at' => $course->created_at,
             'updated_at' => $course->updated_at->format('d/m/Y'),
             'last_updated' => optional(
-                $course->curriculum->last(fn($curriculum) =>
+                $course->curriculum->last(
+                    fn($curriculum) =>
                     $curriculum->lectures->last(fn($lecture) => $lecture !== null)
                 )
             )->updated_at?->format('d/m/Y'),
@@ -518,36 +521,52 @@ class CourseController extends Controller
     //store lesson
     public function storeLecture(Request $request, $curriculum_id)
     {
-        $curriculum = Curriculum::find($curriculum_id);
-        if (!$curriculum) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Curriculum not found',
-            ], 404);
-        }
-        $validator = Validator::make($request->all(), [
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'video_url' => 'required|string',
-        ]);
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors(),
-            ], 400);
-        }
+        DB::beginTransaction();
+        try {
+            $curriculum = Curriculum::find($curriculum_id);
+            if (!$curriculum) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Curriculum not found',
+                ], 404);
+            }
+            $validator = Validator::make($request->all(), [
+                'title' => 'required|string|max:255',
+                'description' => 'required|string',
+                'video_url' => 'required|string',
+            ]);
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors(),
+                ], 400);
+            }
 
-        $lecture = $curriculum->lectures()->create([
-            'title' => $request->title,
-            'slug' => generateUniqueSlug(Lecture::class, $request->title),
-            'description' => $request->description,
-            'video_url' => $request->video_url,
-        ]);
-        return response()->json([
-            'success' => true,
-            'message' => 'Lesson created successfully',
-            'lecture' => $lecture,
-        ], 201);
+            $lecture = $curriculum->lectures()->create([
+                'title' => $request->title,
+                'slug' => generateUniqueSlug(Lecture::class, $request->title),
+                'description' => $request->description,
+                'video_url' => $request->video_url,
+            ]);
+
+            $courseProgress = CourseProgress::where('course_id', $curriculum->course_id)->first();
+            if ($courseProgress) {
+                $courseProgress->total_lectures = totalCourseLecturesCount($curriculum->course_id);
+                $courseProgress->save();
+            }
+            DB::commit();
+            return response()->json([
+                'success' => true,
+                'message' => 'Lesson created successfully',
+                'lecture' => $lecture,
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     //update lesson

@@ -67,4 +67,9 @@ class Course extends Model
         return $this->hasMany(Checkout::class);
     }
 
+    public function courseProgress()
+    {
+        return $this->hasMany(CourseProgress::class);
+    }
+
 }

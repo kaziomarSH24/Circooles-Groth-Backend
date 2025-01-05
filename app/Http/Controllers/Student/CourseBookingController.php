@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\Checkout;
 use App\Models\Course;
+use App\Models\CourseProgress;
 use App\Models\Transaction;
 use App\Models\Wallets;
 use App\Services\PaystackService;
@@ -99,6 +100,14 @@ class CourseBookingController extends Controller
             $checkout->total_amount = $response->data->metadata->course_price;
             $checkout->reference_id = $response->data->reference;
             $checkout->save();
+
+            //course progress table
+            $courseProgress = new CourseProgress();
+            $courseProgress->user_id = $response->data->metadata->user_id;
+            $courseProgress->course_id = $response->data->metadata->course_id;
+            $courseProgress->total_lectures = totalCourseLecturesCount($response->data->metadata->course_id);
+            $courseProgress->save();
+
 
             $transaction = Transaction::where('reference', $reference)->first();
             $transaction->status = 'success';
