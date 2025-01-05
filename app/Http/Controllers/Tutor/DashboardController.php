@@ -10,69 +10,89 @@ use App\Models\TutorReview;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use DB;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
     // This function is used to display the tutor dashboard
     //count Enrolled Courses and Completed Courses api
-    public function enrolledCourses()
+
+
+
+    public function tutorDashboardStats(Request $request)
     {
-        $tutorId = Auth::user()->tutorInfo->id;
-        $totalEnrolled = Schedule::whereHas('tutorBooking', function ($query) use ($tutorId) {
-            $query->where('tutor_id', $tutorId);
-        })->where('status', 'success')->count();
+        try {
+            $tutorId = Auth::user()->tutorInfo->id;
 
-        return response()->json([
-            'success' => true,
-            'totalEnrolled' => $totalEnrolled,
-        ]);
-    }
+            $startDate = null;
+            $endDate = null;
+            $filter = $request->input('filter', null);
 
-    //total completed courses
-    public function completedCourses()
-    {
-        $tutorId = Auth::user()->tutorInfo->id;
-        $totalCompleted = Schedule::whereHas('tutorBooking', function ($query) use ($tutorId) {
-            $query->where('tutor_id', $tutorId);
-        })->where('status', 'completed')->count();
+            if ($filter === 'weekly') {
+                $startDate = Carbon::now()->startOfWeek();
+                $endDate = Carbon::now()->endOfWeek();
+            } elseif ($filter === 'monthly') {
+                $startDate = Carbon::now()->startOfMonth();
+                $endDate = Carbon::now()->endOfMonth();
+            } elseif ($filter === 'yearly') {
+                $startDate = Carbon::now()->startOfYear();
+                $endDate = Carbon::now()->endOfYear();
+            }
 
-        return response()->json([
-            'success' => true,
-            'totalCompleted' => $totalCompleted,
-        ]);
-    }
-
-    //total students
-    public function totalStudents()
-    {
-        $tutorId = Auth::user()->tutorInfo->id;
-        $totalStudents = TutorBooking::where('tutor_id', $tutorId)
-            ->distinct('student_id')->count('student_id');
-
-        return response()->json([
-            'success' => true,
-            'totalStudents' => $totalStudents,
-        ]);
-    }
-
-    //total earnings
-    public function totalEarnings()
-    {
-        $tutorId = Auth::user()->tutorInfo->id;
-        $totalEarnings = Escrow::whereHas('booking.schedule', function ($query) {
-            $query->where('status', 'completed');
-        })
-            ->whereHas('booking', function ($query) use ($tutorId) {
+            // Total enrolled courses
+            $enrolledCourses = Schedule::whereHas('tutorBooking', function ($query) use ($tutorId) {
                 $query->where('tutor_id', $tutorId);
-            })
-            ->where('status', 'released')
-            ->selectRaw('SUM(hold_amount - deducted_amount) as total')
-            ->value('total');
+            })->where('status', 'success');
 
-        return response()->json([
-            'success' => true,
-            'totalEarnings' => $totalEarnings,
-        ]);
+            if ($startDate && $endDate) {
+                $enrolledCourses->whereBetween('created_at', [$startDate, $endDate]);
+            }
+            $totalEnrolled = $enrolledCourses->count();
+
+            // Total completed courses
+            $completeCourses = Schedule::whereHas('tutorBooking', function ($query) use ($tutorId) {
+                $query->where('tutor_id', $tutorId);
+            })->where('status', 'completed');
+
+            if ($startDate && $endDate) {
+                $completeCourses->whereBetween('created_at', [$startDate, $endDate]);
+            }
+            $totalCompleted = $completeCourses->count();
+
+            // Total students
+            $totalStudents = TutorBooking::where('tutor_id', $tutorId);
+            if ($startDate && $endDate) {
+                $totalStudents->whereBetween('created_at', [$startDate, $endDate]);
+            }
+            $totalStudents = $totalStudents->distinct('student_id')->count('student_id');
+
+            // Total earnings
+            $totalEarnings = Escrow::whereHas('booking.schedule', function ($query) {
+                $query->where('status', 'completed');
+            })->whereHas('booking', function ($query) use ($tutorId) {
+                $query->where('tutor_id', $tutorId);
+            })->where('status', 'released');
+
+            if ($startDate && $endDate) {
+                $totalEarnings->whereBetween('release_date', [$startDate, $endDate]);
+            }
+            $totalEarnings = $totalEarnings->selectRaw('SUM(hold_amount - deducted_amount) as total')->value('total') ?? 0;
+
+            return response()->json([
+                'success' => true,
+                'filter' => $filter,
+                'data' => [
+                    'totalCompletedCourses' => $totalCompleted,
+                    'totalStudents' => $totalStudents,
+                    'totalEarnings' => $totalEarnings,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     //total earnings graph

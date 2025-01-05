@@ -94,16 +94,12 @@ Route::group(['prefix' => 'tutor', 'middleware' => ['jwt.auth', 'tutor']], funct
 
     //tutor Dashboard
     Route::controller(TutorDashboardController::class)->group(function () {
-        Route::get('/enrolled-courses', 'enrolledCourses');
-        Route::get('/completed-courses', 'completedCourses');
-        Route::get('/total-students', 'totalStudents');
-        Route::get('/total-earnings', 'totalEarnings');
+        Route::get('/dashboard', 'tutorDashboardStats');
         Route::get('/total-earning-graph', 'totalEarningsGraph');
         Route::get('/total-review-graph', 'totalReviewsGraph');
         Route::get('/review-summary', 'reviewSummary');
     });
 });
-
 
 
 
