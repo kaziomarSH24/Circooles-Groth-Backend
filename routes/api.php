@@ -28,6 +28,9 @@ use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
 //Home Controller
 Route::controller(HomeController::class)->group(function () {
     Route::get('/categories', 'allCategory');
+    Route::get('/courses', 'allCourses');
+    Route::get('/all-programs', 'allCategoriesWithCourses');
+    Route::get('/top-rated-tutors', 'topRatedTutors');
 });
 
 
@@ -208,7 +211,7 @@ Route::group(['prefix' => 'student', 'middleware' => 'jwt.auth'], function () {
 
     //dashboard routes
     Route::controller(DashboardController::class)->group(function () {
-        Route::get('/dashboard', 'dashboard');
+        Route::get('/dashboard-states', 'dashboardStates');
         Route::get('enrolled-courses', 'enrolledCourses');
         Route::get('my-tutor', 'myTutor');
         Route::get('upcoming-session', 'upcomingSessions');

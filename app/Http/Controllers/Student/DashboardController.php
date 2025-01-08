@@ -127,6 +127,30 @@ class DashboardController extends Controller
         ]);
     }
 
+    /**
+     * Dashboard States
+     */
+
+    public function dashboardStates(){
+        $enrolledCourses = auth()->user()->courseProgress()->count();
+        $activeCourses = auth()->user()->courseProgress()->where('progress', '<', 100)->count();
+        $completeCourses = auth()->user()->courseProgress()->where('progress', 100)->count();
+        $upcomingSessions = Schedule::whereHas('tutorBooking', function ($query) {
+            $query->where('student_id', auth()->id())
+                ->where('status', 'enrolled');
+        })->where('start_time', '>', Carbon::now())->count();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'enrolled_courses' => $enrolledCourses,
+                'active_courses' => $activeCourses,
+                'complete_courses' => $completeCourses,
+                'upcoming_sessions' => $upcomingSessions,
+            ]
+
+        ]);
+    }
     //count course lectures
     public function markedLectureCompleted($lecture_id)
     {
