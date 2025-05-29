@@ -11,6 +11,7 @@ with **{{ $session['student_name'] }}**.
 ## Session Details:
 - **Date:** {{ \Carbon\Carbon::parse($session['start_time'])->toFormattedDateString() }}
 - **Time:** {{ \Carbon\Carbon::parse($session['start_time'])->format('h:i A') }}
+- **Time Left:** {{ $session['time_left'] }}
 - **Duration:** {{ $session['duration'] }} hours
 - **Mode:** {{ ucfirst($session['type']) }}
 

@@ -34,11 +34,6 @@ Route::controller(HomeController::class)->group(function () {
 });
 
 
-
-
-
-
-
 // Auth Controller
 Route::controller(AuthController::class)->group(function () {
     Route::post('/login', 'login');
@@ -46,14 +41,11 @@ Route::controller(AuthController::class)->group(function () {
     Route::get('/logout', 'logout')->middleware('jwt.auth');
     Route::get('/verify-email', 'verifyEmail');
     Route::get('/resentOtp', 'resendOtp');
-    Route::post('reset-password', 'resetPassword');
+    Route::post('reset-password', 'resetPassword')->middleware('jwt.auth');
 
     //social login
     Route::get('/auth/google', 'loginWithGoogle')
         ->name('google.login');
-
-    //social login callback
-    Route::get('/auth/google/callback', [AuthController::class, 'googleLoginCallback'])->name('google.login.callback');
 
     //social login callback
     Route::get('/auth/google/callback', 'googleLoginCallback')
@@ -103,8 +95,6 @@ Route::group(['prefix' => 'tutor', 'middleware' => ['jwt.auth', 'tutor']], funct
         Route::get('/review-summary', 'reviewSummary');
     });
 });
-
-
 
 
 
@@ -235,44 +225,46 @@ Route::group(['prefix' => 'student', 'middleware' => 'jwt.auth'], function () {
 //transfer routes
 
 //paymetn verify
-Route::get('/payment/verify', function (Request $request) {
-    $paystack = new PaystackService();
-    $response = $paystack->verifyTransaction($request->reference);
-    return response()->json(['response' => $response]);
-});
+// Route::get('/payment/verify', function (Request $request) {
+//     $paystack = new PaystackService();
+//     $response = $paystack->verifyTransaction($request->reference);
+//     return response()->json(['response' => $response]);
+// });
 
-Route::prefix('transfer')->controller(PaystackTransferController::class)->group(function () {
-    Route::post('/test', 'transfer');
-    Route::post('/transferToTutor', 'transferToTutor');
-});
+// Route::prefix('transfer')->controller(PaystackTransferController::class)->group(function () {
+//     Route::post('/test', 'transfer');
+//     Route::post('/transferToTutor', 'transferToTutor');
+// });
 
-//test route
-Route::get('/test', function () {
-    $sessions = Schedule::where('is_started', false)
-    ->where('start_time', '>', now())
-    ->where('start_time', '<', now()->addHours(24))
-    ->get();
+// //test route
+// Route::get('/test', function () {
+//     $sessions = Schedule::where('is_started', false)
+//     ->where('start_time', '>', now())
+//     ->where('start_time', '<', now()->addHours(24))
+//     ->get();
 
-    $sessions->transform(function ($session) {
-        return [
-            'id' => $session->id,
-            'tutor_name' => $session->tutorBooking->tutorInfo->tutor->name,
-            'tutor_email' => $session->tutorBooking->tutorInfo->tutor->email,
-            'student_name' => $session->tutorBooking->student->name,
-            'student_email' => $session->tutorBooking->student->email,
-            'start_time' => $session->start_time,
-            'duration' => Carbon::parse($session->start_time)->diffInHours(Carbon::parse($session->end_time)) . ' hours',
-            'type' => $session->type,
-            'zoom_link' => $session->zoom_link,
-        ];
-    });
+//     $sessions->transform(function ($session) {
+//         return [
+//             'id' => $session->id,
+//             'tutor_name' => $session->tutorBooking->tutorInfo->tutor->name,
+//             'tutor_email' => $session->tutorBooking->tutorInfo->tutor->email,
+//             'student_name' => $session->tutorBooking->student->name,
+//             'student_email' => $session->tutorBooking->student->email,
+//             'start_time' => $session->start_time,
+//             'duration' => Carbon::parse($session->start_time)->diffInHours(Carbon::parse($session->end_time)) . ' hours',
+//             'type' => $session->type,
+//             'zoom_link' => $session->zoom_link,
+//         ];
+//     });
 
-    foreach($sessions as $session) {
-        $minutesDiff = Carbon::parse($session['start_time'])->diff(now());
-        dd($minutesDiff);
-      dd( Carbon::parse($session['start_time'])->diffInMinutes(now()));
+//     foreach($sessions as $session) {
+//         $minutesDiff = Carbon::parse($session['start_time'])->diff(now());
+//         dd($minutesDiff);
+//       dd( Carbon::parse($session['start_time'])->diffInMinutes(now()));
 
-}
+// }
 
 
-});
+// });
+
+

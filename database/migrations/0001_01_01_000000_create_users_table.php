@@ -26,12 +26,12 @@ return new class extends Migration
             $table->timestamp('otp_expiry_at')->nullable();
             $table->rememberToken();
             $table->timestamps();
-        }); 
+        });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
             $table->string('token');
-            $table->string('otp')->nullable();  
+            $table->string('otp')->nullable();
             $table->timestamp('otp_expire_at')->nullable();
             $table->timestamp('created_at')->nullable();
         });

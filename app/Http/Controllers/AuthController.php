@@ -236,15 +236,9 @@ class AuthController extends Controller
      */
      public function resetPassword(Request $request){
 
-        if (isset($request->otp)) {
-            $user = User::where('otp', $request->otp)->first();
+
+            $user = Auth::user();
             if($user){
-                if ($user->otp_expiry_at < Carbon::now()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'OTP has expired! Please request for a new OTP!',
-                    ], 401);
-                }
                 $validator = Validator::make($request->all(), [
                     'password' => 'required|string|confirmed|min:6',
                 ]);
@@ -263,15 +257,9 @@ class AuthController extends Controller
             }else{
                 return response()->json([
                     'success' => false,
-                    'message' => 'Invalid OTP!',
+                    'message' => 'Unauthorized user!',
                 ], 401);
             }
-        } else {
-            return response()->json([
-                'success' => false,
-                'message' => 'OTP is required!',
-            ], 401);
-        }
      }
 
     /**

@@ -11,3 +11,4 @@ use Illuminate\Support\Facades\Schedule as FacadesSchedule;
 // })->purpose('Display an inspiring quote')->hourly();
 
 // FacadesSchedule::command('app:notify-before-session')->everyTwoSeconds();
+ 

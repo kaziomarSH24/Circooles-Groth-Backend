@@ -32,9 +32,9 @@ class NotifyBeforeSession extends Command
 
         $sessions = Schedule::where('is_started', false)
         ->whereIn('start_time', [
-            now()->addMinutes(1),
-            now()->addMinutes(5),
-            now()->addMinutes(10)
+            now()->addHours(2),
+            now()->addHours(8),
+            now()->addHours(24)
         ])
         ->get();
 
@@ -46,6 +46,7 @@ class NotifyBeforeSession extends Command
             'student_name' => $session->tutorBooking->student->name,
             'student_email' => $session->tutorBooking->student->email,
             'start_time' => $session->start_time,
+            'time_left' => round(Carbon::parse($session->start_time)->diffInHours(now(), true)) . ' hours',
             'duration' => Carbon::parse($session->start_time)->diffInHours(Carbon::parse($session->end_time)) . ' hours',
             'type' => $session->type,
             'zoom_link' => $session->zoom_link,
