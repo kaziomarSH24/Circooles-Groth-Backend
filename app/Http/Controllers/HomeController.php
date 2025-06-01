@@ -116,9 +116,10 @@ class HomeController extends Controller
     //top rated tutor
     public function topRatedTutors(Request $request)
     {
-        $tutors = TutorInfo::with('tutorReviews')
-                    ->orderBy('session_charge', 'desc')
-                  ->paginate($request->per_page ?? 6);
+        $tutors = TutorInfo::with('tutorReviews', 'user')
+                    ->withAvg('tutorReviews as avg_rating', 'rating')
+                    ->orderByDesc('avg_rating')
+                    ->paginate($request->per_page ?? 6);
 
         $tutors->getCollection()->transform(function ($tutor) {
             return [
@@ -128,7 +129,7 @@ class HomeController extends Controller
                 'expertise_area' => $tutor->expertise_area,
                 'language' => $tutor->language,
                 'session_charge' => $tutor->session_charge,
-                'avg_rating' => round($tutor->tutorReviews->avg('rating'), 1),
+                'avg_rating' => round($tutor->avg_rating, 1),
                 'total_reviews' => $tutor->tutorReviews->count(),
             ];
         });

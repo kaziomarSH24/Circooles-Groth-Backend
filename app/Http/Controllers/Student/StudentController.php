@@ -115,7 +115,7 @@ class StudentController extends Controller
         DB::beginTransaction();
         try {
             $request->validate([
-                'tutor_id' => 'required',
+                'tutor_id' => 'required|exists:tutor_infos,id',
                 'schedule' => 'required|array',
                 'schedule.*.date' => 'required|string',
                 'schedule.*.time' => 'required|string',
