@@ -124,6 +124,7 @@ class HomeController extends Controller
             return [
                 'id' => $tutor->id,
                 'name' => $tutor->user->name,
+                'avatar' => $tutor->user->avatar,
                 'expertise_area' => $tutor->expertise_area,
                 'language' => $tutor->language,
                 'session_charge' => $tutor->session_charge,

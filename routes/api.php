@@ -38,9 +38,9 @@ Route::controller(HomeController::class)->group(function () {
 Route::controller(AuthController::class)->group(function () {
     Route::post('/login', 'login');
     Route::post('/register', 'register');
-    Route::get('/logout', 'logout')->middleware('jwt.auth');
-    Route::get('/verify-email', 'verifyEmail');
-    Route::get('/resentOtp', 'resendOtp');
+    Route::post('/logout', 'logout')->middleware('jwt.auth');
+    Route::post('/verify-email', 'verifyEmail');
+    Route::post('/resentOtp', 'resendOtp');
     Route::post('reset-password', 'resetPassword')->middleware('jwt.auth');
 
     //social login
@@ -220,6 +220,13 @@ Route::group(['prefix' => 'student', 'middleware' => 'jwt.auth'], function () {
         Route::post('/give-course-review/{course_id}', 'giveCourseReview');
         Route::delete('/delete-course-review/{review_id}', 'deleteCourseReview');
     });
+});
+
+
+//test
+Route::get('/test', function () {
+    $videoId = getYoutubeVideoId('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    return response()->json(['video id' => $videoId]);
 });
 
 //transfer routes

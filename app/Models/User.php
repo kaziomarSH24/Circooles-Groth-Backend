@@ -99,4 +99,13 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(CourseProgress::class);
     }
 
+    public function getAvatarAttribute($value)
+    {
+        if ($value == null) {
+
+            return "https://ui-avatars.com/api/?background=random&name={$this->first_name}+{$this->last_name}&bold=true";
+        }
+        return asset('storage/' . $value);
+    }
+
 }

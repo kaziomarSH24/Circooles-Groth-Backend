@@ -250,6 +250,10 @@ class AuthController extends Controller
                 $user->otp_expiry_at = null;
                 $user->save();
 
+                // Invalidate the current token
+                JWTAuth::invalidate(JWTAuth::getToken());
+                // Generate a new token
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Password reset successfully!',
@@ -314,7 +318,14 @@ class AuthController extends Controller
         if($request->hasFile('avatar')){
 
             if($user->avatar){
-                unlink(public_path('avatars/'.$user->avatar)); //delete old image
+                $old_avatar = str_replace('/storage/', '', parse_url($user->avatar)['path']);
+                // dd($old_avatar);
+                    $avatarPath = public_path('avatars/' . $old_avatar);
+                    // dd($avatarPath);
+                    if (file_exists($avatarPath)) {
+                        unlink($avatarPath); // delete old image
+                    }
+
             }
 
             $avatar = $request->file('avatar');

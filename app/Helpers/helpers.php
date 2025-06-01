@@ -31,7 +31,6 @@ if (!function_exists('scheduleMail')) {
     function scheduleMail($data)
     {
         Mail::to($data['email'])->send(new ScheduleMail($data));
-
     }
 }
 
@@ -70,39 +69,55 @@ if (!function_exists('generateUniqueSlug')) {
 }
 
 //create transaction reference unique id
-if(!function_exists('referenceId')){
-    function referenceId(){
-        return 'circooles_' .uniqid();
+if (!function_exists('referenceId')) {
+    function referenceId()
+    {
+        return 'circooles_' . uniqid();
     }
 }
 /**
  * Total indeviual course lectures count
  */
 
- if(!function_exists('totalLecturesCount')){
-     function totalCourseLecturesCount($course_id)
-     {
-         $course = Course::find($course_id);
+if (!function_exists('totalLecturesCount')) {
+    function totalCourseLecturesCount($course_id)
+    {
+        $course = Course::find($course_id);
 
-         $lectures = $course->curriculum->map(function ($curriculum) {
-             return $curriculum->lectures->count();
-         });
-         return $lectures->sum();
-     }
- }
-
- /**
-  * Get course lectures ids
-  */
-    if(!function_exists('courseLecturesIds')){
-        function courseLecturesIds($course_id)
-        {
-            $course = Course::find($course_id);
-
-            $lectureIds = $course->curriculum->flatMap(function ($curriculum) {
-                return $curriculum->lectures->pluck('id');
-            });
-
-            return $lectureIds;
-        }
+        $lectures = $course->curriculum->map(function ($curriculum) {
+            return $curriculum->lectures->count();
+        });
+        return $lectures->sum();
     }
+}
+
+/**
+ * Get course lectures ids
+ */
+if (!function_exists('courseLecturesIds')) {
+    function courseLecturesIds($course_id)
+    {
+        $course = Course::find($course_id);
+
+        $lectureIds = $course->curriculum->flatMap(function ($curriculum) {
+            return $curriculum->lectures->pluck('id');
+        });
+
+        return $lectureIds;
+    }
+}
+
+//Get youtube video id from url
+if (!function_exists('getYoutubeVideoId')) {
+    /**
+     * Extracts the YouTube video ID from a given URL.
+     *
+     * @param string $url The YouTube video URL.
+     * @return string|null The extracted video ID or null if not found.
+     */
+    function getYoutubeVideoId($url)
+    {
+        parse_str(parse_url($url, PHP_URL_QUERY), $params);
+        return $params['v'] ?? null;
+    }
+}

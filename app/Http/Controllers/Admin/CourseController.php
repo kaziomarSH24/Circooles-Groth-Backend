@@ -127,11 +127,12 @@ class CourseController extends Controller
                 $trailer_slug = Str::slug(pathinfo($trailer_video->getClientOriginalName(), PATHINFO_FILENAME));
                 $trailer_slug = $trailer_slug . '.' . $trailer_video->extension();
                 $trailer_video_name = time() . '_' . $trailer_slug;
-                $trailer_video->move(public_path('uploads/admin/course/video'), $trailer_video_name);
+              $videoPath =  $trailer_video->move(public_path('uploads/admin/course/video'), $trailer_video_name);
             }
             //create url
-            $thumbnail_url = url('uploads/admin/course/thumbnail/' . $thumbnail_name);
-            $trailer_video_url = url('uploads/admin/course/video/' . $trailer_video_name);
+            // $thumbnail_url = url('uploads/admin/course/thumbnail/' . $thumbnail_name);
+            // $trailer_video_url = url('uploads/admin/course/video/' . $trailer_video_name);
+            // dd($thumbnail_name, $videoPath);
 
             $course = new Course();
             $course->user_id = $user->id;
@@ -145,8 +146,8 @@ class CourseController extends Controller
             $course->language = $request->language;
             $course->c_level = $request->c_level;
             $course->duration = $request->duration;
-            $course->thumbnail = $thumbnail_url;
-            $course->trailer_video = $trailer_video_url;
+            $course->thumbnail = $thumbnail_name;
+            $course->trailer_video = $trailer_video_name;
             $course->description = $request->description;
             $course->teach_course = json_encode($request->teach_course);
             $course->targer_audience = json_encode($request->targer_audience);
@@ -231,6 +232,7 @@ class CourseController extends Controller
                     'id' => $review->id,
                     'user_id' => $review->user_id,
                     'user_name' => $review->user->name,
+                    'avatar' => $review->user->avatar ,
                     'rating' => $review->rating,
                     'comment' => $review->comment,
                     'created_at' => $review->created_at->diffForHumans(),
@@ -288,6 +290,7 @@ class CourseController extends Controller
                 //unlink old file
                 $thumbnail_path = parse_url($course->thumbnail);
                 $thumbnail_path = public_path($thumbnail_path['path']);
+                // dd($thumbnail_path);
                 if (file_exists($thumbnail_path)) {
                     unlink($thumbnail_path);
                 }
@@ -314,8 +317,8 @@ class CourseController extends Controller
                 $trailer_video->move(public_path('uploads/admin/course/video'), $trailer_video_name);
             }
             //create url
-            $thumbnail_url = url('uploads/admin/course/thumbnail/' . $thumbnail_name);
-            $trailer_video_url = url('uploads/admin/course/video/' . $trailer_video_name);
+            // $thumbnail_url = url('uploads/admin/course/thumbnail/' . $thumbnail_name);
+            // $trailer_video_url = url('uploads/admin/course/video/' . $trailer_video_name);
 
             $course->user_id = $user->id;
             $course->title = $request->title;
@@ -328,8 +331,8 @@ class CourseController extends Controller
             $course->language = $request->language;
             $course->c_level = $request->c_level;
             $course->duration = $request->duration;
-            $course->thumbnail = $thumbnail_url;
-            $course->trailer_video = $trailer_video_url;
+            $course->thumbnail = $thumbnail_name;
+            $course->trailer_video = $trailer_video_name;
             $course->description = $request->description;
             $course->teach_course = json_encode($request->teach_course);
             $course->targer_audience = json_encode($request->targer_audience);

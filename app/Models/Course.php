@@ -19,7 +19,7 @@ class Course extends Model
         'c_level',
         'duration',
         'thumbnail',
-        'trail_video',
+        'trailer_video',
         'description',
         'teach_course',
         'targer_audience',
@@ -70,6 +70,18 @@ class Course extends Model
     public function courseProgress()
     {
         return $this->hasMany(CourseProgress::class);
+    }
+
+    //get attribute for course thumbnail
+    public function getThumbnailAttribute($value)
+    {
+        return $value ? asset('uploads/admin/course/thumbnail/' . $value) : null;
+    }
+
+    //get attribute for course trail_video
+    public function getTrailerVideoAttribute($value)
+    {
+        return $value ? asset('uploads/admin/course/video/' . $value) : null;
     }
 
 }
