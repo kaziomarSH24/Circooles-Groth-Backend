@@ -82,10 +82,14 @@ class AdminController extends Controller
     =============*/
     public function allUsers(Request $request)
     {
-        $users = User::when(request('search'), function ($query) {
-            return $query->where('name', 'like', '%' . request('search') . '%')
-                ->orWhere('email', 'like', '%' . request('search') . '%');
-        })->paginate($request->per_page ?? 10);
+        $users = User::where('role', '!=', 'admin')
+            ->when(request('search'), function ($query) {
+            return $query->where(function ($q) {
+                $q->where('name', 'like', '%' . request('search') . '%')
+                  ->orWhere('email', 'like', '%' . request('search') . '%');
+            });
+            })
+            ->paginate($request->per_page ?? 10);
 
         if ($users->isEmpty()) {
             return response()->json([

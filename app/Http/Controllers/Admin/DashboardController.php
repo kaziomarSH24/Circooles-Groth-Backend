@@ -10,12 +10,49 @@ use Illuminate\Http\Request;
 class DashboardController extends Controller
 {
     //total users, total tutors, total earnings
-    public function adminDashboard()
+    public function adminDashboard(Request $request)
     {
         try {
-            $totalUsers = User::count();
-            $totalTutors = User::where('role', 'tutor')->count();
-            $totalEarnings = Transaction::where('status', 'success')->sum('amount');
+            $filter = $request->input('filter', 'all');
+            if ($filter == 'all') {
+                $totalUsers = User::count();
+                $totalTutors = User::where('role', 'tutor')->count();
+                $totalEarnings = Transaction::where('status', 'success')->sum('amount');
+            } elseif ($filter == 'weekly') {
+                $totalUsers = User::where('created_at', '>=', now()->startOfWeek())
+                    ->where('created_at', '<=', now()->endOfWeek())
+                    ->count();
+                $totalTutors = User::where('role', 'tutor')
+                    ->where('created_at', '>=', now()->startOfWeek())
+                    ->where('created_at', '<=', now()->endOfWeek())
+                    ->count();
+                $totalEarnings = Transaction::where('status', 'success')
+                    ->where('created_at', '>=', now()->startOfWeek())
+                    ->where('created_at', '<=', now()->endOfWeek())
+                    ->sum('amount');
+            } elseif ($filter == 'monthly') {
+                $totalUsers = User::whereYear('created_at', now()->year)
+                    ->whereMonth('created_at', now()->month)
+                    ->count();
+                $totalTutors = User::where('role', 'tutor')
+                    ->whereYear('created_at', now()->year)
+                    ->whereMonth('created_at', now()->month)
+                    ->count();
+                $totalEarnings = Transaction::where('status', 'success')
+                    ->whereYear('created_at', now()->year)
+                    ->whereMonth('created_at', now()->month)
+                    ->sum('amount');
+            } elseif ($filter == 'yearly') {
+                $totalUsers = User::whereYear('created_at', now()->year)
+                    ->count();
+                $totalTutors = User::where('role', 'tutor')
+                    ->whereYear('created_at', now()->year)
+                    ->count();
+                $totalEarnings = Transaction::where('status', 'success')
+                    ->whereYear('created_at', now()->year)
+                    ->sum('amount');
+            }
+
 
             return response()->json([
                 'success' => true,
