@@ -57,4 +57,27 @@ class TutorInfo extends Model
     {
         return $this->hasMany(TutorBooking::class, 'tutor_id');
     }
+
+     public function getSubjectsAttribute()
+    {
+        $ids = $this->subjects_id;
+        if (is_string($ids)) {
+            $ids = json_decode($ids, true);
+        }
+        if (!is_array($ids)) {
+            $ids = [];
+        }
+        // dd();
+        return Subject::whereIn('id', $ids)->get();
+    }
+    /**
+     * Mutator to ensure subjects_id is always stored as an array of integers.
+     */
+    // public function setSubjectsIdAttribute($value)
+    // {
+    //     if (is_string($value)) {
+    //         $value = json_decode($value, true);
+    //     }
+    //     $this->attributes['subjects_id'] = json_encode(array_map('intval', (array) $value));
+    // }
 }

@@ -51,7 +51,10 @@ class CourseController extends Controller
                 'slug' => $course->slug,
                 'price' => $course->price,
                 'category' => $course->category->name,
+                'category_slug' => $course->category->slug,
+                'category_id' => $course->category->id,
                 'sub_category' => $course->subCategory->name,
+                'sub_category_id' => $course->sub_category_id,
                 'topic' => $course->topic,
                 'language' => $course->language,
                 'c_level' => $course->c_level,
@@ -177,12 +180,19 @@ class CourseController extends Controller
                 'message' => 'Course not found',
             ], 404);
         }
+        //related category courses
+        $relatedCourses = Course::where('category_id', $course->category_id)
+            ->select('id', 'title', 'subtitle', 'slug')
+            ->where('id', '!=', $course->id)
+            ->take(5)
+            ->get();
         $course = [
             'id' => $course->id,
             'title' => $course->title,
             'subtitle' => $course->subtitle,
             'slug' => $course->slug,
             'price' => $course->price,
+            'category_id' => $course->category_id,
             'category' => $course->category->name,
             'sub_category' => $course->subCategory->name,
             'topic' => $course->topic,
@@ -238,6 +248,7 @@ class CourseController extends Controller
                     'created_at' => $review->created_at->diffForHumans(),
                 ];
             }),
+            'full_program' => $relatedCourses ?? [],
 
         ];
 

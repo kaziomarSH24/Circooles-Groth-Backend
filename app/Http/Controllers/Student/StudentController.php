@@ -83,7 +83,9 @@ class StudentController extends Controller
 
         $reviews = $tutors->tutorReviews->map(function ($review) {
             return [
+                'review_id' => $review->id,
                 'review_by' => $review->user->name,
+                'avatar' => $review->user->avatar,
                 'rating' => $review->rating,
                 'comment' => $review->comment,
                 'created_at' => $review->created_at->diffForHumans()
@@ -108,6 +110,62 @@ class StudentController extends Controller
         ];
 
         return response()->json(['tutor' => $tutor]);
+    }
+
+    //tutor average rating
+    public function tutorAverageRating($id)
+    {
+        $tutor = TutorInfo::with('tutorReviews')
+            ->where('id', $id)
+            ->first();
+
+        if (!$tutor) {
+            return response()->json(['message' => 'Tutor not found'], 404);
+        }
+
+        $averageRating = $tutor->tutorReviews->avg('rating');
+        $totalReviews = $tutor->tutorReviews->count();
+        $reviews = $tutor->tutorReviews;
+
+        // Count reviews per star rating (1-5)
+        $starCounts = [
+            1 => 0,
+            2 => 0,
+            3 => 0,
+            4 => 0,
+            5 => 0,
+        ];
+
+        foreach ($tutor->tutorReviews as $review) {
+            $rating = (int) $review->rating;
+            if (isset($starCounts[$rating])) {
+                $starCounts[$rating]++;
+            }
+        }
+
+        // Paginate reviews (default 10 per page, can be set via ?per_page=)
+        $perPage = request()->get('per_page', 10);
+        $paginatedReviews = $reviews->map(function ($review) {
+            return [
+            'review_by' => $review->user->name,
+            'avatar' => $review->user->avatar,
+            'rating' => $review->rating,
+            'comment' => $review->comment,
+            'created_at' => $review->created_at->diffForHumans()
+            ];
+        })->forPage(request()->get('page', 1), $perPage)->values();
+
+        return response()->json([
+            'tutor_id' => $tutor->id,
+            'average_rating' => round($averageRating, 1),
+            'total_reviews' => $totalReviews,
+            'star_counts' => $starCounts,
+            'reviews' => $paginatedReviews,
+            'current_page' => (int) request()->get('page', 1),
+            'per_page' => (int) $perPage,
+            'last_page' => ceil($totalReviews / $perPage),
+        ]);
+
     }
 
     public function bookTutor(Request $request)

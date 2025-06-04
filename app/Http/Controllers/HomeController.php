@@ -48,6 +48,8 @@ class HomeController extends Controller
                 'slug' => $course->slug,
                 'thumbnail' => $course->thumbnail,
                 'category' => $course->category->name,
+                'category_slug' => $course->category->slug,
+                'category_id' => $course->category->id,
                 'duration' => $course->duration,
                 'language' => $course->language,
                 'price' => $course->price,
@@ -129,6 +131,60 @@ class HomeController extends Controller
                 'expertise_area' => $tutor->expertise_area,
                 'language' => $tutor->language,
                 'session_charge' => $tutor->session_charge,
+                'subjects' => $tutor->subjects->pluck('name')->toArray(),
+                'avg_rating' => round($tutor->avg_rating, 1),
+                'total_reviews' => $tutor->tutorReviews->count(),
+            ];
+        });
+
+        if ($tutors->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tutor not found',
+            ], 404);
+        }
+        return response()->json([
+            'success' => true,
+            'tutors' => $tutors,
+        ]);
+    }
+    //top rated tutor
+    public function tutorService(Request $request)
+    {
+        $serviceType = $request->input('service_type', 'all');
+
+        $query = TutorInfo::with('tutorReviews', 'user')
+                    ->withAvg('tutorReviews as avg_rating', 'rating');
+                    // ->orderByDesc('avg_rating');
+        if ($serviceType === 'online') {
+            $query->where('online','!=', null);
+        } elseif ($serviceType === 'offline') {
+            $query->where('offline','!=', null);
+        } elseif ($serviceType === 'all') {
+            $query->whereNotNull('online')->orWhereNotNull('offline');
+        }
+        $tutors = $query->orderByDesc('id')
+                        ->paginate($request->per_page ?? 6);
+
+        $tutors->getCollection()->transform(function ($tutor) use ($serviceType) {
+            return [
+                'id' => $tutor->id,
+                'name' => $tutor->user->name,
+                'avatar' => $tutor->user->avatar,
+                'expertise_area' => $tutor->expertise_area,
+                'language' => $tutor->language,
+                'session_charge' => $tutor->session_charge,
+                'subjects' => $tutor->subjects->pluck('name')->toArray(),
+                ...($serviceType === 'all'
+                    ? [
+                        'online' => json_decode($tutor->online, true),
+                        'offline' => json_decode($tutor->offline, true),
+                    ]
+                    : [
+                        ($serviceType === 'online' ? 'online' : 'offline') => json_decode($serviceType === 'online' ? $tutor->online : $tutor->offline, true),
+                    ]
+                ),
+                // 'offline' => json_decode($tutor->offline, true),
                 'avg_rating' => round($tutor->avg_rating, 1),
                 'total_reviews' => $tutor->tutorReviews->count(),
             ];

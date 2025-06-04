@@ -31,6 +31,7 @@ Route::controller(HomeController::class)->group(function () {
     Route::get('/courses', 'allCourses');
     Route::get('/all-programs', 'allCategoriesWithCourses');
     Route::get('/top-rated-tutors', 'topRatedTutors');
+    Route::get('/tutor-service', 'tutorService');
 });
 
 
@@ -179,6 +180,7 @@ Route::group(['prefix' => 'student', 'middleware' => 'jwt.auth'], function () {
         Route::get('/all-tutors', 'allTutors');
         Route::get('/tutor-expertise-area', 'findTutorByExpertiseArea');
         Route::get('/tutor/profile/{id}', 'tutorProfile');
+        Route::get('/tutor/average-rating/{id}', 'tutorAverageRating');
 
         //booking routes
         Route::post('/book-tutor', 'bookTutor');
