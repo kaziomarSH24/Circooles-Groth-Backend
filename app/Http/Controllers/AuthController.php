@@ -30,6 +30,7 @@ class AuthController extends Controller
                 'name' => $data->name,
                 'email' => $data->email,
                 'phone' => $data->phone,
+                'avatar' => $data->avatar,
                 'role' => $data->role,
                 'paystack_customer_id' => $data->paystack_customer_id,
                 'edu_level' => $data->edu_level,

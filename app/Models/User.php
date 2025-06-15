@@ -105,7 +105,7 @@ class User extends Authenticatable implements JWTSubject
 
             return "https://ui-avatars.com/api/?background=random&name={$this->name}&bold=true";
         }
-        return asset('storage/' . $value);
+        return asset('avatars/' . $value);
     }
 
 }

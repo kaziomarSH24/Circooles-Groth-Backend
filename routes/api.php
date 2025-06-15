@@ -55,7 +55,7 @@ Route::controller(AuthController::class)->group(function () {
     Route::middleware('jwt.auth')->group(function () {
         Route::get('/user', 'getUser');
         Route::put('/update-profile', 'updateProfile');
-        Route::put('/update-password', 'updatePassword');
+        Route::post('/update-password', 'updatePassword');
     });
 });
 

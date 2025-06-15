@@ -12,7 +12,7 @@ class CategoryController extends Controller
     //index category
     public function index()
     {
-        $categories = Category::all();
+        $categories = Category::with('subCategories')->get();
         if ($categories->isEmpty()) {
             return response()->json([
                 'success' => false,
@@ -54,7 +54,7 @@ class CategoryController extends Controller
     //show category
     public function show($slug)
     {
-        $category = Category::where('slug', $slug)->first();
+        $category = Category::with('subCategories')->where('slug', $slug)->first();
         if (!$category) {
             return response()->json([
                 'message' => 'Category not found',
