@@ -26,4 +26,6 @@ class TutorVerification extends Model
     {
         return $this->belongsTo(TutorInfo::class);
     }
+
+    
 }

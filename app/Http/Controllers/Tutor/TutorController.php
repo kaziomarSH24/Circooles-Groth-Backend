@@ -27,7 +27,7 @@ class TutorController extends Controller
     public function getTutor(Request $request)
     {
         $user = Auth::user();
-        $tutor = TutorInfo::with('user')->where('user_id', $user->id)->first();
+      $tutor = TutorInfo::with('user','tutorVerification')->where('user_id', $user->id)->first();
 
         if (!$tutor) {
             return response()->json([
@@ -75,6 +75,8 @@ class TutorController extends Controller
             'online' => $tutor['online'],
             'offline' => $tutor['offline'],
             'session_charge' => $tutor['session_charge'],
+            'status' => $tutor['tutor_verification']['status'],
+            'created_at' => $tutor['created_at'],
         ];
         return response()->json([
             'success' => true,
@@ -88,6 +90,7 @@ class TutorController extends Controller
         $subject = explode(',', $subject_id);
         $request->merge(['subjects_id' => $subject]);
         $validetor = Validator::make($request->all(), [
+            'avatar' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'address' => 'required|string',
             'description' => 'required|string',
             'subjects_id' => 'required|array|min:1|max:3',
@@ -113,7 +116,31 @@ class TutorController extends Controller
         }
 
 
+
+
         $user = Auth::user();
+
+        $avatar = $request->file('avatar');
+        if ($avatar) {
+            if ($user->avatar) {
+                $old_avatar = str_replace('/storage/', '', parse_url($user->avatar)['path']);
+                // dd($old_avatar);
+                $avatarPath = public_path('avatars/' . $old_avatar);
+                // dd($avatarPath);
+                if (file_exists($avatarPath)) {
+                    unlink($avatarPath); // delete old image
+                }
+            }
+
+            $avatar_name = time() . '.' . $avatar->extension();
+            if (!file_exists(public_path('avatars'))) {
+                mkdir(public_path('avatars'), 0777, true); //create directory if not exists
+            }
+            $avatar->move(public_path('avatars'), $avatar_name);
+            $user->avatar = $avatar_name;
+            $user->save();
+        }
+
         $tutor = TutorInfo::UpdateOrCreate(
             ['user_id' => $user->id],
             [
@@ -142,7 +169,7 @@ class TutorController extends Controller
         ]);
     }
 
-    public function verifyTutorInfo(Request $request)
+    public function tutor_verificationInfo(Request $request)
     {
         DB::beginTransaction();
 
@@ -154,31 +181,27 @@ class TutorController extends Controller
                     'message' => 'Set up tutor profile first',
                 ]);
             }
-
             // return request()->all();
-
             $validator = Validator::make($request->all(), [
                 'academic_certificates' => 'required|array',
                 'academic_certificates.*.certificate' => 'required|string',
-                'academic_certificates.*.image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|dimensions:max_width=800,max_height=400',
+                'academic_certificates.*.image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|',
                 'id_card' => 'required|array',
                 'id_card.type' => 'required|string',
-                'id_card.front_side' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|dimensions:max_width=800,max_height=400',
-                'id_card.back_side' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|dimensions:max_width=800,max_height=400',
+                'id_card.front_side' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|',
+                'id_card.back_side' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|',
                 'tsc' => 'nullable|array',
                 'tsc.number' => 'required|string',
-                'tsc.image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|dimensions:max_width=800,max_height=400',
+                'tsc.image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|',
                 'verification_fee' => 'required|numeric',
                 'status' => 'nullable|in:pending,declined,verified',
             ]);
-
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => $validator->errors(),
                 ]);
             }
-
             //unlink previous images
             $oldCertificates = $tutor->tutorVerification ? json_decode($tutor->tutorVerification->academic_certificates) : null;
             if ($oldCertificates) {
@@ -257,7 +280,7 @@ class TutorController extends Controller
                     'amount' => $request->verification_fee * 100,
                     'email' => Auth::user()->email,
                     'reference' => referenceId(),
-                    'callback_url' => route('tutor.verify.callback'),
+                    'callback_url' => $request->redirect_url ?: route('tutor.verify.callback'),
                 ]);
             }
 
@@ -330,14 +353,35 @@ class TutorController extends Controller
         }
 
         $academic_certificates = json_decode($tutor_verification->academic_certificates);
-        $id_card = json_decode($tutor_verification->id_card);
+        if (is_array($academic_certificates)) {
+            foreach ($academic_certificates as $certificate) {
+                if (isset($certificate->image)) {
+                    $certificate->image = asset('uploads/tutor/academic_certificates/' . $certificate->image);
+                }
+            }
+        }
+
+
+        $idCard = json_decode($tutor_verification->id_card);
+        if (is_object($idCard)) {
+            if (isset($idCard->front_side)) {
+                $idCard->front_side = asset('uploads/tutor/id_card/' . $idCard->front_side);
+            }
+            if (isset($idCard->back_side)) {
+                $idCard->back_side = asset('uploads/tutor/id_card/' . $idCard->back_side);
+            }
+        }
+
         $tsc = json_decode($tutor_verification->tsc);
+        if (is_object($tsc) && isset($tsc->image)) {
+            $tsc->image = asset('uploads/tutor/tsc/' . $tsc->image);
+        }
 
         $data = [
             'id' => $tutor_verification->id,
             'tutor_id' => $tutor_verification->tutor_id,
             'academic_certificates' => $academic_certificates,
-            'id_card' => $id_card,
+            'id_card' => $idCard,
             'tsc' => $tsc,
             'verification_fee' => $tutor_verification->verification_fee,
             'status' => $tutor_verification->status,
@@ -576,7 +620,7 @@ class TutorController extends Controller
 
             //update transaction
             $escrow = Escrow::where('booking_id', $schedule->tutor_booking_id)
-                            ->first();
+                ->first();
             $escrow->deducted_amount += $penalty;
             $escrow->save();
 
@@ -584,13 +628,13 @@ class TutorController extends Controller
             $reason = $schedule->reason ? json_decode($schedule->reason) : [];
             $reason[] = [
                 'type' => 'reschedule',
-                'detials' =>[
+                'detials' => [
                     'reschedule_by' => 'tutor',
                     'reschedule_at' => now(),
                     'previous_date' => $schedule->start_time,
                     'penalty' => $penalty,
                     'reason' => 'Rescheduled by tutor',
-            ]
+                ]
             ];
 
             $startTimestamp = Carbon::parse($start_time)->format('Y-m-d H:i:s');
@@ -616,18 +660,18 @@ class TutorController extends Controller
                 'booking_time' => $schedule->created_at->format('Y-m-d H:i:s'),
             ];
             //send email
-           scheduleMail($data);
-           $data = [
-            'email' => Auth::user()->email,
-            'name' => Auth::user()->name,
-            'title' => 'Session Rescheduled',
-            'content' => 'Your session has been rescheduled successfully. You have been charged a penalty of $' . $penalty,
-            'booking_id' => $schedule->tutor_booking_id,
-            'total_cost' => $schedule->tutorBooking->session_cost,
-            'session_quantity' => 1,
-            'start_date' => $startTimestamp,
-            'booking_time' => $schedule->created_at->format('Y-m-d H:i:s'),
-           ];
+            scheduleMail($data);
+            $data = [
+                'email' => Auth::user()->email,
+                'name' => Auth::user()->name,
+                'title' => 'Session Rescheduled',
+                'content' => 'Your session has been rescheduled successfully. You have been charged a penalty of $' . $penalty,
+                'booking_id' => $schedule->tutor_booking_id,
+                'total_cost' => $schedule->tutorBooking->session_cost,
+                'session_quantity' => 1,
+                'start_date' => $startTimestamp,
+                'booking_time' => $schedule->created_at->format('Y-m-d H:i:s'),
+            ];
 
             //send email
             scheduleMail($data);

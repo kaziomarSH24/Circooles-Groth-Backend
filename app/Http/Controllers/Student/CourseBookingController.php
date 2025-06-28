@@ -11,6 +11,7 @@ use App\Models\Wallets;
 use App\Services\PaystackService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CourseBookingController extends Controller
 {
@@ -18,6 +19,7 @@ class CourseBookingController extends Controller
     {
         DB::beginTransaction();
         try {
+            Log::info($request->all());
             if (isset($request->course_id)) {
                 $course = Course::find($request->course_id);
                 if (!$course) {
@@ -36,7 +38,7 @@ class CourseBookingController extends Controller
                         'user_name' => auth()->user()->name,
                         'user_email' => auth()->user()->email,
                     ],
-                    'callback_url' => route('course.payment.callback'),
+                    'callback_url' => $request->redirect_url ?: route('course.payment.callback'),
                 ];
                 $paystack = new PaystackService();
                 $reference = referenceId();
@@ -81,10 +83,11 @@ class CourseBookingController extends Controller
     {
         DB::beginTransaction();
         try {
+            Log::info($request->all());
             $reference = $request->reference;
             $paystack = new PaystackService();
             $response = $paystack->verifyTransaction($reference);
-
+            Log::info('verify transaction', ['reference' => $reference, 'response' => $response]);
             if ($response->status === false) {
                 throw new \Exception($response->message);
             }
@@ -117,10 +120,8 @@ class CourseBookingController extends Controller
             $course->total_enrollment += 1;
             $course->save();
 
-            $balance = Wallets::where('user_id', $transaction->seller_id)->first()->balance;
-            if (!$balance) {
-                $balance = 0;
-            }
+            $wallet = Wallets::where('user_id', $transaction->seller_id)->first();
+            $balance = $wallet ? $wallet->balance : 0;
             $balance += $transaction->amount;
 
             Wallets::updateOrCreate(
@@ -129,6 +130,7 @@ class CourseBookingController extends Controller
             );
 
             DB::commit();
+            // Log::info('data', $reference->data);
             return response()->json([
                 'success' => true,
                 'message' => 'Course payment successful',
@@ -136,6 +138,7 @@ class CourseBookingController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Course payment callback error', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()

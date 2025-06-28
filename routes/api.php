@@ -74,7 +74,7 @@ Route::group(['prefix' => 'tutor', 'middleware' => ['jwt.auth', 'tutor']], funct
 
 
         //tutor verify transaction callback
-        Route::get('/verify/callback', 'tutorVerifyCallback')
+        Route::post('/verify/callback', 'tutorVerifyCallback')
             ->name('tutor.verify.callback')
             ->withoutMiddleware(['jwt.auth', 'tutor']);
         //check method
@@ -104,13 +104,13 @@ Route::group(['prefix' => 'admin', 'middleware' => ['jwt.auth', 'admin']], funct
 
     //admin dashboard
     Route::controller(AdminDashboardController::class)->group(function () {
-        Route::get('/dashboard', 'adminDashboard');
-        Route::get('/total-earning-graph', 'totalEarningsGraph');
+        Route::get('/dashboard', 'adminDashboard')->withoutMiddleware('admin');
+        Route::get('/total-earning-graph', 'totalEarningsGraph')->withoutMiddleware('admin');
     });
 
     //admin controller
     Route::controller(AdminController::class)->group(function () {
-        Route::get('/subject', 'getSubject');
+        Route::get('/subject', 'getSubject')->withoutMiddleware('admin');
         Route::post('/subject/store', 'storeSubject');
         Route::delete('/subject/destroy/{id}', 'destroySubject');
 
@@ -197,7 +197,7 @@ Route::group(['prefix' => 'student', 'middleware' => 'jwt.auth'], function () {
         Route::post('/course-booking', 'courseBooking');
 
         //course payment callback
-        Route::get('/course-payment/callback', 'coursePaymentCallback')
+        Route::post('/course-payment/callback', 'coursePaymentCallback')
             ->name('course.payment.callback')->withoutMiddleware('jwt.auth');
     });
 

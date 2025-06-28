@@ -8,6 +8,7 @@ use App\Models\Transaction;
 use App\Models\TutorVerification;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class AdminController extends Controller
 {
@@ -84,10 +85,10 @@ class AdminController extends Controller
     {
         $users = User::where('role', '!=', 'admin')
             ->when(request('search'), function ($query) {
-            return $query->where(function ($q) {
-                $q->where('name', 'like', '%' . request('search') . '%')
-                  ->orWhere('email', 'like', '%' . request('search') . '%');
-            });
+                return $query->where(function ($q) {
+                    $q->where('name', 'like', '%' . request('search') . '%')
+                        ->orWhere('email', 'like', '%' . request('search') . '%');
+                });
             })
             ->paginate($request->per_page ?? 10);
 
@@ -184,10 +185,45 @@ class AdminController extends Controller
                 'message' => 'Tutor verification info not found',
             ], 404);
         }
+
+
+
+        $academicCertificates = json_decode($verifyTutor->academic_certificates);
+        if (is_array($academicCertificates)) {
+            foreach ($academicCertificates as $certificate) {
+                if (isset($certificate->image)) {
+                    $certificate->image = asset('uploads/tutor/academic_certificates/'. $certificate->image);
+                }
+            }
+        }
+
+
+        $idCard = json_decode($verifyTutor->id_card);
+        if (is_object($idCard)) {
+            if (isset($idCard->front_side)) {
+                $idCard->front_side = asset('uploads/tutor/id_card/'. $idCard->front_side);
+            }
+            if (isset($idCard->back_side)) {
+                $idCard->back_side = asset('uploads/tutor/id_card/'. $idCard->back_side);
+            }
+        }
+
+        $tsc = json_decode($verifyTutor->tsc);
+        if (is_object($tsc) && isset($tsc->image)) {
+            $tsc->image = asset('uploads/tutor/tsc/'. $tsc->image);
+        }
+
+
+        //set image urls
         $verifyTutor = [
-            'academic_certificates' => json_decode($verifyTutor->academic_certificates),
-            'id_card' => json_decode($verifyTutor->id_card),
-            'tsc' => json_decode($verifyTutor->tsc),
+            'id' => $verifyTutor->id,
+            'tutor_id' => $verifyTutor->tutor_id,
+            'name' => $verifyTutor->tutor->user->name,
+            'email' => $verifyTutor->tutor->user->email,
+            'payment_status' => $verifyTutor->payment_status,
+            'academic_certificates' => $academicCertificates, //
+            'id_card' => $idCard,
+            'tsc' => $tsc,
         ];
         return response()->json([
             'success' => true,

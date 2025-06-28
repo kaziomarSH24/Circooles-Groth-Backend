@@ -19,7 +19,21 @@ class DashboardController extends Controller
     {
         try {
             $tutorId = Auth::user()->tutorInfo->id;
-
+            $startDate = null;
+            $endDate = null;
+            $filter = $request->input('filter', null);
+            if(!$tutorId) {
+                 return response()->json([
+                'success' => true,
+                'filter' => $filter,
+                'data' => [
+                    'totalEnrolledCourses' => 0,
+                    'totalCompletedCourses' => 0,
+                    'totalStudents' => 0,
+                    'totalEarnings' => 0,
+                ],
+            ]);
+            }
             $startDate = null;
             $endDate = null;
             $filter = $request->input('filter', null);
@@ -125,7 +139,7 @@ class DashboardController extends Controller
 
             foreach (range(1, 12) as $month) {
                 $monthlyData[] = [
-                    'month_name' => date('F', mktime(0, 0, 0, $month, 10)),
+                    'month' => date('F', mktime(0, 0, 0, $month, 10)),
                     'total_earnings' => 0,
                 ];
             }
@@ -136,9 +150,9 @@ class DashboardController extends Controller
             }
 
             return response()->json([
-                'status' => 'success',
+                'success' => true,
                 'filter' => 'monthly',
-                'data' => $monthlyData,
+                'totalEarnings' => $monthlyData,
             ]);
         } elseif ($filter === 'yearly') {
             $yearlyData = $totalEarnings->groupBy('year')->map(function ($yearGroup, $year) {
@@ -149,14 +163,14 @@ class DashboardController extends Controller
             })->values();
 
             return response()->json([
-                'status' => 'success',
+                'success' => true,
                 'filter' => 'yearly',
-                'data' => $yearlyData,
+                'totalEarnings' => $yearlyData,
             ]);
         }
 
         return response()->json([
-            'status' => 'error',
+            'success' => false,
             'message' => 'Invalid filter provided.',
         ]);
     }
