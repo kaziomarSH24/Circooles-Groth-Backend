@@ -26,69 +26,87 @@ class TutorController extends Controller
 
     public function getTutor(Request $request)
     {
-        $user = Auth::user();
-      $tutor = TutorInfo::with('user','tutorVerification')->where('user_id', $user->id)->first();
+        try {
+            $user = Auth::user();
+            $tutor = TutorInfo::with('user', 'tutorVerification')->where('user_id', $user->id)->first();
+            // return response()->json([
+            //     'success' => true,
+            //     'data' => $tutor,
+            // ]);
+            if (!$tutor) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tutor not found',
+                    'data' => $user,
+                ]);
+            }
 
-        if (!$tutor) {
+            $tutor = collect($tutor)->transform(function ($value, $key) {
+                if ($key == 'subjects_id') {
+                     return is_string($value) ? json_decode($value) : $value;
+                }
+                if ($key == 'online') {
+                    return json_decode($value);
+                }
+                if ($key == 'offline') {
+                    return json_decode($value);
+                }
+                return $value;
+            });
+            // return response()->json([
+            //     'success' => true,
+            //     'data' => $tutor,
+            // ]);
+            $subjects = Subject::whereIn('id', $tutor['subjects_id'])->get(['id', 'name']);
+            $data = [
+                'id' => $tutor['id'],
+                'user_id' => $tutor['user_id'],
+                'name' => $tutor['user']['name'],
+                'email' => $tutor['user']['email'],
+                'role' => $tutor['user']['role'],
+                'edu_level' => $tutor['user']['edu_level'],
+                'paystack_customer_id' => $tutor['user']['paystack_customer_id'],
+                'phone' => $tutor['user']['phone'],
+                'avatar' => $tutor['user']['avatar'],
+                'address' => $tutor['address'],
+                'description' => $tutor['description'],
+                'subjects' => $subjects,
+                'designation' => $tutor['designation'],
+                'organization' => $tutor['organization'],
+                'teaching_experience' => $tutor['teaching_experience'],
+                'expertise_area' => $tutor['expertise_area'],
+                'degree' => $tutor['degree'],
+                'institute' => $tutor['institute'],
+                'graduation_year' => $tutor['graduation_year'],
+                'time_zone' => $tutor['time_zone'],
+                'online' => $tutor['online'],
+                'offline' => $tutor['offline'],
+                'session_charge' => $tutor['session_charge'],
+                'status' => $tutor['tutor_verification']['status'] ?? 'pending',
+                'created_at' => $tutor['created_at'],
+            ];
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+            ]);
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Tutor not found',
-                'data' => $user,
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage(),
             ]);
         }
-
-        $tutor = collect($tutor)->transform(function ($value, $key) {
-            if ($key == 'subjects_id') {
-                return json_decode($value);
-            }
-            if ($key == 'online') {
-                return json_decode($value);
-            }
-            if ($key == 'offline') {
-                return json_decode($value);
-            }
-            return $value;
-        });
-
-        $subjects = Subject::whereIn('id', $tutor['subjects_id'])->get(['id', 'name']);
-        $data = [
-            'id' => $tutor['id'],
-            'user_id' => $tutor['user_id'],
-            'name' => $tutor['user']['name'],
-            'email' => $tutor['user']['email'],
-            'role' => $tutor['user']['role'],
-            'edu_level' => $tutor['user']['edu_level'],
-            'paystack_customer_id' => $tutor['user']['paystack_customer_id'],
-            'phone' => $tutor['user']['phone'],
-            'avatar' => $tutor['user']['avatar'],
-            'address' => $tutor['address'],
-            'description' => $tutor['description'],
-            'subjects' => $subjects,
-            'designation' => $tutor['designation'],
-            'organization' => $tutor['organization'],
-            'teaching_experience' => $tutor['teaching_experience'],
-            'expertise_area' => $tutor['expertise_area'],
-            'degree' => $tutor['degree'],
-            'institute' => $tutor['institute'],
-            'graduation_year' => $tutor['graduation_year'],
-            'time_zone' => $tutor['time_zone'],
-            'online' => $tutor['online'],
-            'offline' => $tutor['offline'],
-            'session_charge' => $tutor['session_charge'],
-            'status' => $tutor['tutor_verification']['status'],
-            'created_at' => $tutor['created_at'],
-        ];
-        return response()->json([
-            'success' => true,
-            'data' => $data,
-        ]);
     }
 
     public function updateTutorProfile(Request $request)
     {
         $subject_id = $request->input('subjects_id');
-        $subject = explode(',', $subject_id);
-        $request->merge(['subjects_id' => $subject]);
+        $subjectsArray = [];
+        if (is_string($subject_id) && !empty($subject_id)) {
+
+            $subjectsArray = array_map('trim', explode(',', $subject_id));
+        }
+        $request->merge(['subjects_id' => $subjectsArray]);
         $validetor = Validator::make($request->all(), [
             'avatar' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'address' => 'required|string',
@@ -146,7 +164,7 @@ class TutorController extends Controller
             [
                 'address' => $request->address,
                 'description' => $request->description,
-                'subjects_id' => json_encode($request->subjects_id),
+                'subjects_id' => $subjectsArray,
                 'designation' => $request->designation,
                 'organization' => $request->organization,
                 'teaching_experience' => $request->teaching_experience,

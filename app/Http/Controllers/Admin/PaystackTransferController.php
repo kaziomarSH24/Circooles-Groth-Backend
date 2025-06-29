@@ -11,35 +11,35 @@ use Illuminate\Http\Request;
 class PaystackTransferController extends Controller
 {
     //transfer to tutor
-    // public function transferToTutor(Request $request)
-    // {
-    //     $tutor = TutorInfo::find($request->tutor_id);
-    //     if (!$tutor) {
-    //         return response()->json(['error' => 'Tutor not found'], 404);
-    //     }
+    public function transferToTutor(Request $request)
+    {
+        $tutor = TutorInfo::find($request->tutor_id);
+        if (!$tutor) {
+            return response()->json(['error' => 'Tutor not found'], 404);
+        }
 
-    //     $escrow = Escrow::where('booking_id', $request->booking_id)->first();
-    //     if (!$escrow) {
-    //         return response()->json(['error' => 'Escrow not found'], 404);
-    //     }
+        $escrow = Escrow::where('booking_id', $request->booking_id)->first();
+        if (!$escrow) {
+            return response()->json(['error' => 'Escrow not found'], 404);
+        }
 
-    //     $paystack = new PaystackService();
-    //     $data = [
-    //         'source' => 'balance',
-    //         'amount' => $escrow->hold_amount,
-    //         'recipient' => $tutor->accountDetails->recipient_code,
-    //         'reason' => 'Tutor payment',
-    //     ];
+        $paystack = new PaystackService();
+        $data = [
+            'source' => 'balance',
+            'amount' => $escrow->hold_amount * 100, // Paystack requires amount in kobo
+            'recipient' => $tutor->accountDetails->recipient_code,
+            'reason' => 'Tutor payment',
+        ];
 
-    //     $transfer = $paystack->transfer($data);
-    //     if ($transfer->status === true) {
-    //         $escrow->status = 'released';
-    //         $escrow->save();
-    //         return response()->json(['message' => 'Transfer successful']);
-    //     } else {
-    //         return response()->json(['error' => $transfer->message], 400);
-    //     }
-    // }
+        $transfer = $paystack->transfer($data);
+        if ($transfer->status === true) {
+            $escrow->status = 'released';
+            $escrow->save();
+            return response()->json(['message' => 'Transfer successful']);
+        } else {
+            return response()->json(['error' => $transfer->message], 400);
+        }
+    }
 
     //transfer test
     public function transfer(Request $request)

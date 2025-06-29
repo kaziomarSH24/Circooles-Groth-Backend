@@ -32,6 +32,7 @@ Route::controller(HomeController::class)->group(function () {
     Route::get('/all-programs', 'allCategoriesWithCourses');
     Route::get('/top-rated-tutors', 'topRatedTutors');
     Route::get('/tutor-service', 'tutorService');
+    Route::get('/search', 'search');
 });
 
 
@@ -240,10 +241,10 @@ Route::get('/test', function () {
 //     return response()->json(['response' => $response]);
 // });
 
-// Route::prefix('transfer')->controller(PaystackTransferController::class)->group(function () {
-//     Route::post('/test', 'transfer');
-//     Route::post('/transferToTutor', 'transferToTutor');
-// });
+Route::prefix('transfer')->controller(PaystackTransferController::class)->group(function () {
+    Route::post('/test', 'transfer');
+    Route::post('/transferToTutor', 'transferToTutor');
+});
 
 // //test route
 // Route::get('/test', function () {

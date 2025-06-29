@@ -68,7 +68,7 @@ class StudentController extends Controller
             ->first();
         $tutor = collect($tutors)->transform(function ($value, $key) {
             if ($key == 'subjects_id') {
-                return json_decode($value);
+                return is_string($value) ? json_decode($value) : $value;
             }
             if ($key == 'online') {
                 return json_decode($value);
@@ -147,11 +147,11 @@ class StudentController extends Controller
         $perPage = request()->get('per_page', 10);
         $paginatedReviews = $reviews->map(function ($review) {
             return [
-            'review_by' => $review->user->name,
-            'avatar' => $review->user->avatar,
-            'rating' => $review->rating,
-            'comment' => $review->comment,
-            'created_at' => $review->created_at->diffForHumans()
+                'review_by' => $review->user->name,
+                'avatar' => $review->user->avatar,
+                'rating' => $review->rating,
+                'comment' => $review->comment,
+                'created_at' => $review->created_at->diffForHumans()
             ];
         })->forPage(request()->get('page', 1), $perPage)->values();
 
@@ -165,7 +165,6 @@ class StudentController extends Controller
             'per_page' => (int) $perPage,
             'last_page' => ceil($totalReviews / $perPage),
         ]);
-
     }
 
     public function bookTutor(Request $request)
