@@ -180,6 +180,7 @@ class StudentController extends Controller
                 'repeat' => 'nullable|in:daily,weekly,bi-weekly,monthly',
                 'recurrence_end' => $request->repeat ? 'required|date' : 'nullable|date',
                 'session_cost' => 'required',
+                'redirect_url' => 'nullable|url',
             ]);
 
             $session_quantity = count($request->schedule);
@@ -281,7 +282,7 @@ class StudentController extends Controller
                     'booking_type' => 'tutor',
                     'booking_time' => now()
                 ]),
-                'callback_url' => route('tutor.booking.callback')
+                'callback_url' => $request->redirect_url ?? route('tutor.booking.callback')
             ]);
 
             //mail data

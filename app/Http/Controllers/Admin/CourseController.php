@@ -563,8 +563,8 @@ class CourseController extends Controller
                 'video_url' => $request->video_url,
             ]);
 
-            $courseProgress = CourseProgress::where('course_id', $curriculum->course_id)->first();
-            if ($courseProgress) {
+            $courseProgresses = CourseProgress::where('course_id', $curriculum->course_id)->get();
+            foreach ($courseProgresses as $courseProgress) {
                 $courseProgress->total_lectures = totalCourseLecturesCount($curriculum->course_id);
                 $courseProgress->save();
             }

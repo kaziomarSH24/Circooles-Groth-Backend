@@ -11,6 +11,7 @@ use App\Http\Controllers\Student\DashboardController;
 use App\Http\Controllers\Student\ReviewController;
 use App\Http\Controllers\Tutor\DashboardController as TutorDashboardController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Student\StudentController;
 use App\Http\Controllers\Tutor\TutorAccountDetails;
 use App\Http\Controllers\Tutor\TutorController;
@@ -189,7 +190,7 @@ Route::group(['prefix' => 'student', 'middleware' => 'jwt.auth'], function () {
         Route::post('/refund-booking/{booking_id}', 'refundAmount');
 
         //booking callback
-        Route::get('/book-tutor/callback', 'bookingCallback')
+        Route::post('/book-tutor/callback', 'bookingCallback')
             ->name('tutor.booking.callback')->withoutMiddleware('jwt.auth');
     });
 
@@ -225,12 +226,21 @@ Route::group(['prefix' => 'student', 'middleware' => 'jwt.auth'], function () {
     });
 });
 
+Route::middleware('jwt.auth')->prefix('notifications')->as('notifications.')->group(function () {
 
-//test
-Route::get('/test', function () {
-    $videoId = getYoutubeVideoId('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
-    return response()->json(['video id' => $videoId]);
+    Route::get('/', [NotificationController::class, 'index'])->name('index');
+    Route::get('/stats', [NotificationController::class, 'stats'])->name('stats');
+    Route::post('/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('markAllAsRead');
+    Route::patch('/{notification}/read', [NotificationController::class, 'markAsRead'])->name('markAsRead');
+    Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy');
 });
+
+
+// //test
+// Route::get('/test', function () {
+//     $videoId = getYoutubeVideoId('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+//     return response()->json(['video id' => $videoId]);
+// });
 
 //transfer routes
 

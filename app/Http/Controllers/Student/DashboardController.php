@@ -20,16 +20,20 @@ class DashboardController extends Controller
     public function enrolledCourses(Request $request)
     {
         $perPage = $request->per_page;
-        $courses = auth()->user()->checkouts()->paginate($per_page ?? 10);
+        $courses = auth()->user()->checkouts()->with('course.courseProgress')->paginate($perPage ?? 10);
         if ($courses->isEmpty()) {
             return response()->json([
                 'success' => false,
                 'message' => 'No course found'
             ]);
         }
+        // dd($courses->course);
         $courses->getCollection()->transform(function ($course) {
+            $courseProgress = $course->course->courseProgress()->where('user_id', auth()->id())->first();
+            // dd($courseProgress ? $courseProgress->progress : 0);
             return [
                 'id' => $course->id,
+                'user_id' => $course->user_id,
                 'course_id' => $course->course->id,
                 'title' => $course->course->title,
                 'slug' => $course->course->slug,
@@ -39,6 +43,7 @@ class DashboardController extends Controller
                 'language' => $course->course->language,
                 'duration' => $course->course->duration,
                 'price' => $course->course->price,
+                'progress' => $courseProgress ? $courseProgress->progress : 0,
                 'created_at' => $course->created_at,
             ];
         });
@@ -157,18 +162,21 @@ class DashboardController extends Controller
         //find course id by lecture id
         try {
             $courseId = Lecture::find($lecture_id)->curriculum->course_id;
+            // dd($courseId);
             $courseProgress = CourseProgress::where('user_id', auth()->id())
                 ->where('course_id', $courseId)
                 ->first();
+                // dd($courseProgress);
 
             if ($courseProgress) {
                 $completedIds = $courseProgress->completed_lectures ? json_decode($courseProgress->completed_lectures, true) : [];
                 $totalLectures = $courseProgress->total_lectures;
-
+                // dd($totalLectures);
                 if (!in_array($lecture_id, $completedIds) ) {
                     $completedIds[] = $lecture_id;
                     //count total ids
                     $completedLectures = count($completedIds);
+                    // dd($completedLectures);
                     $courseProgress->completed_lectures = json_encode($completedIds);
                     $courseProgress->progress = round(($completedLectures / $totalLectures) * 100, 2);
                     $courseProgress->save();
