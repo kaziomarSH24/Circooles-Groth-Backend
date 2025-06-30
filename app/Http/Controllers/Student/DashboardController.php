@@ -67,6 +67,7 @@ class DashboardController extends Controller
             return [
                 'id' => $tutor->tutor->id,
                 'name' => $tutor->tutor->user->name,
+                'avatar' => $tutor->tutor->user->avatar,
                 'expertise_area' => $tutor->tutor->expertise_area,
                 'language' => $tutor->tutor->language,
                 'session_charge' => $tutor->tutor->session_charge,
@@ -102,8 +103,9 @@ class DashboardController extends Controller
 
         $schedules = Schedule::whereHas('tutorBooking', function ($query) {
             $query->where('student_id', auth()->id())
-                ->where('status', 'enrolled');
+            ->where('status', 'enrolled');
         })->orderBy('start_time', 'desc')->paginate($perPage ?? 10);
+        // dd($schedules);
 
         if ($schedules->isEmpty()) {
             return response()->json([
