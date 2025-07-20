@@ -203,14 +203,14 @@ class TutorController extends Controller
             $validator = Validator::make($request->all(), [
                 'academic_certificates' => 'required|array',
                 'academic_certificates.*.certificate' => 'required|string',
-                'academic_certificates.*.image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|',
+                'academic_certificates.*.image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|',
                 'id_card' => 'required|array',
                 'id_card.type' => 'required|string',
-                'id_card.front_side' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|',
-                'id_card.back_side' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|',
+                'id_card.front_side' => 'required|image|mimes:jpeg,png,jpg,gif,svg|',
+                'id_card.back_side' => 'required|image|mimes:jpeg,png,jpg,gif,svg|',
                 'tsc' => 'nullable|array',
                 'tsc.number' => 'required|string',
-                'tsc.image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048|',
+                'tsc.image' => 'required|image|mimes:jpeg,png,jpg,gif,svg',
                 'verification_fee' => 'required|numeric',
                 'status' => 'nullable|in:pending,declined,verified',
             ]);
