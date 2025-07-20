@@ -187,7 +187,7 @@ class TutorController extends Controller
         ]);
     }
 
-    public function tutor_verificationInfo(Request $request)
+    public function verifyTutorInfo(Request $request)
     {
         DB::beginTransaction();
 
