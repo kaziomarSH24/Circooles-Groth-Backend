@@ -39,6 +39,10 @@ class User extends Authenticatable implements JWTSubject
         'otp_expiry_at',
     ];
 
+    protected $appends = [
+        'unread_notifications_count',
+    ];
+
     /**
      * Get the attributes that should be cast.
      *
@@ -106,6 +110,12 @@ class User extends Authenticatable implements JWTSubject
             return "https://ui-avatars.com/api/?background=random&name={$this->name}&bold=true";
         }
         return asset('avatars/' . $value);
+    }
+
+    //unread notifications count attribute
+    public function getUnreadNotificationsCountAttribute()
+    {
+        return $this->unreadNotifications()->count();
     }
 
 }
