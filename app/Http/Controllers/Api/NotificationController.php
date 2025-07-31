@@ -13,7 +13,8 @@ class NotificationController extends Controller
 
     public function index()
     {
-        $notifications = Auth::user()->notifications()->paginate(15);
+        $perPage = request()->get('per_page', 15);
+        $notifications = Auth::user()->notifications()->paginate($perPage);
         return $notifications;
         // return NotificationResource::collection($notifications);
     }

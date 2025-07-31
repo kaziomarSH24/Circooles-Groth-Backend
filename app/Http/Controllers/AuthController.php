@@ -237,7 +237,6 @@ class AuthController extends Controller
      */
      public function resetPassword(Request $request){
 
-
             $user = Auth::user();
             if($user){
                 $validator = Validator::make($request->all(), [
