@@ -302,8 +302,7 @@ class AuthController extends Controller
     public function updateProfile(Request $request){
         $validator = Validator::make($request->all(), [
             'name' => 'required|string',
-            'email' => 'required|string|email|unique:users,email,'.Auth::id(),
-            'phone' => 'nullable|string',
+            // 'phone' => 'nullable|string',
             'avatar' => 'required|image|mimes:jpeg,png,jpg| max:2048',
         ]);
         if ($validator->fails()) {
@@ -312,9 +311,8 @@ class AuthController extends Controller
 
 
         $user = Auth::user();
-        $user->name = $request->name;
-        $user->email = $request->email;
-        $user->phone = $request->phone;
+        $user->name = $request->name ?? $user->name;
+        // $user->phone = $request->phone;
 
         if($request->hasFile('avatar')){
 
@@ -335,7 +333,7 @@ class AuthController extends Controller
                 mkdir(public_path('avatars'), 0777, true); //create directory if not exists
             }
             $avatar->move(public_path('avatars'), $avatar_name);
-            $user->avatar = $avatar_name;
+            $user->avatar = $avatar_name ?? $user->avatar;
         }
         $user->save();
 

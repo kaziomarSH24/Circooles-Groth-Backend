@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Validator;
 
@@ -553,6 +554,10 @@ class TutorController extends Controller
     {
         $id = $request->id;
         $zoom_link = $request->zoom_link;
+        Log::info('Update link request', [
+            'id' => $id,
+            'zoom_link' => $zoom_link,
+        ]);
         $tutor_id = Auth::user()->tutorInfo->id;
 
         $schedule = Schedule::find($id);
