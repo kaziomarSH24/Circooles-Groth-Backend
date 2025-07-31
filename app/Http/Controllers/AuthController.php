@@ -272,8 +272,8 @@ class AuthController extends Controller
      */
     public function updatePassword(Request $request){
         $validator = Validator::make($request->all(), [
-            'old_password' => 'required|string',
-            'password' => 'required|string|confirmed|min:6',
+            'old_password' => 'nullable|string',
+            'password' => 'nullable|string|confirmed|min:6',
         ]);
         if ($validator->fails()) {
             return response()->json($validator->errors());
