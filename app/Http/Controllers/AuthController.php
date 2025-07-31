@@ -34,6 +34,7 @@ class AuthController extends Controller
                 'role' => $data->role,
                 'paystack_customer_id' => $data->paystack_customer_id,
                 'edu_level' => $data->edu_level,
+                'unread_notifications_count' => $data->unread_notifications_count,
                 'remember_token' => $data->remember_token,
                 'created_at' => $data->created_at,
                 'updated_at' => $data->updated_at,
